@@ -1,0 +1,47 @@
+{% extends '_layouts/cp' %}
+
+{% set title = 'Section Schema'|t('schemy') %}
+{% set selectedSubnavItem = 'sections' %}
+
+{% block content %}
+    {% if groups is empty %}
+        <p>{{ 'No sections exist yet.'|t('schemy') }}</p>
+    {% endif %}
+
+    {% for group in groups %}
+        <h2>{{ group.label }}</h2>
+        <table class="data fullwidth">
+            <thead>
+                <tr>
+                    <th scope="col">{{ 'Section'|t('app') }}</th>
+                    <th scope="col">{{ 'Schema type'|t('schemy') }}</th>
+                    <th scope="col">{{ 'Entry type overrides'|t('schemy') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in group.sections %}
+                    <tr>
+                        <th scope="row">
+                            <a href="{{ url('schemy/sections/' ~ item.section.id) }}">{{ item.section.name }}</a>
+                        </th>
+                        <td>
+                            {% if item.type %}
+                                <code>{{ item.type }}</code>
+                            {% else %}
+                                <span class="light">{{ 'None'|t('schemy') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.overrideCount %}
+                                {{ item.overrideCount }}
+                            {% else %}
+                                <span class="light">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not loop.last %}<hr>{% endif %}
+    {% endfor %}
+{% endblock %}

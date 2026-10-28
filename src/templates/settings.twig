@@ -1,0 +1,41 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+
+{% set title = 'Settings'|t('app') %}
+{% set selectedSubnavItem = 'settings' %}
+{% set fullPageForm = not readOnly %}
+
+{% block content %}
+    {% include 'schemy/_includes/readonly' %}
+
+    {{ actionInput('schemy/settings/save-general') }}
+    {{ redirectInput('schemy/settings') }}
+
+    {{ forms.lightswitchField({
+        label: 'Output automatically'|t('schemy'),
+        instructions: 'Add JSON-LD to the `<head>` of every front-end page. Turn this off to place `{{ craft.schemy.render() }}` in your templates yourself.'|t('schemy'),
+        name: 'autoInject',
+        on: settings.autoInject,
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Include site identity'|t('schemy'),
+        instructions: 'Output the Organization/Person node configured under Site Identity.'|t('schemy'),
+        name: 'includeIdentity',
+        on: settings.includeIdentity,
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Include WebSite'|t('schemy'),
+        instructions: 'Output a WebSite node for the current site.'|t('schemy'),
+        name: 'includeWebSite',
+        on: settings.includeWebSite,
+    }) }}
+
+    {{ forms.lightswitchField({
+        label: 'Include breadcrumbs'|t('schemy'),
+        instructions: 'Output a BreadcrumbList built from the site home page and, in structure sections, the entry’s ancestors.'|t('schemy'),
+        name: 'includeBreadcrumbs',
+        on: settings.includeBreadcrumbs,
+    }) }}
+{% endblock %}

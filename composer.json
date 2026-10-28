@@ -1,0 +1,65 @@
+{
+    "name": "justinholtweb/craft-schemy",
+    "description": "Schema.org JSON-LD for Craft CMS sections, entry types and individual entries, without the rest of an SEO suite. Map the fields you already have to the structured data search engines read.",
+    "version": "5.0.0",
+    "type": "craft-plugin",
+    "keywords": [
+        "craftcms",
+        "craft-plugin",
+        "schema",
+        "schema.org",
+        "json-ld",
+        "structured-data",
+        "rich-results"
+    ],
+    "license": "proprietary",
+    "homepage": "https://justinholt.com/plugins/craft-schemy",
+    "authors": [
+        {
+            "name": "Justin Holt",
+            "homepage": "https://justinholt.com"
+        }
+    ],
+    "support": {
+        "email": "justin@justinholt.com",
+        "docs": "https://justinholt.com/plugins/craft-schemy/docs",
+        "source": "https://github.com/justinholtweb/craft-schemy",
+        "issues": "https://github.com/justinholtweb/craft-schemy/issues"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "craftcms/cms": "^5.0.0"
+    },
+    "require-dev": {
+        "craftcms/ecs": "dev-main",
+        "craftcms/phpstan": "dev-main",
+        "phpstan/phpstan": "^1.12"
+    },
+    "autoload": {
+        "psr-4": {
+            "justinholtweb\\schemy\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.2"
+        },
+        "allow-plugins": {
+            "craftcms/plugin-installer": true,
+            "yiisoft/yii2-composer": true
+        }
+    },
+    "extra": {
+        "name": "Schemy",
+        "handle": "schemy",
+        "developer": "Justin Holt",
+        "developerUrl": "https://justinholt.com",
+        "documentationUrl": "https://justinholt.com/plugins/craft-schemy/docs",
+        "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-schemy/main/CHANGELOG.md",
+        "class": "justinholtweb\\schemy\\Plugin"
+    }
+}

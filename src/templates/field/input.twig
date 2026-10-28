@@ -1,0 +1,62 @@
+{% import 'schemy/_includes/editor' as schemy %}
+
+<div id="{{ id }}" class="schemy-field" data-schemy-field-root>
+    <div class="schemy-field-mode">
+        <div class="select">
+            <select name="{{ name }}[mode]" aria-label="{{ 'Schema mode'|t('schemy') }}" data-schemy-mode>
+                {% for option in [
+                    {label: 'Inherit'|t('schemy'), value: 'inherit'},
+                    {label: 'Customize'|t('schemy'), value: 'override'},
+                    {label: 'Disable'|t('schemy'), value: 'disable'},
+                ] %}
+                    <option value="{{ option.value }}" {{ value.mode == option.value ? 'selected' }}>{{ option.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <p class="light schemy-field-summary" data-schemy-summary="inherit" {{ value.mode != 'inherit' ? 'hidden' }}>
+            {% if inherited %}
+                {{ 'Uses **{type}** from {from}.'|t('schemy', {type: inherited.type, from: inherited.from})|md(inlineOnly=true) }}
+            {% else %}
+                {{ 'No schema is configured for this element’s section or entry type.'|t('schemy') }}
+            {% endif %}
+        </p>
+        <p class="light schemy-field-summary" data-schemy-summary="disable" {{ value.mode != 'disable' ? 'hidden' }}>
+            {{ 'No schema will be output for this element. Site-wide nodes are unaffected.'|t('schemy') }}
+        </p>
+    </div>
+
+    <div class="schemy-field-editor" data-schemy-summary="override" {{ value.mode != 'override' ? 'hidden' }}>
+        <p class="light">
+            {% if inherited %}
+                {{ 'Properties set here replace the inherited values of the same name. Changing the type starts from a clean slate.'|t('schemy') }}
+            {% endif %}
+            {% if not allowTwig %}
+                {{ 'Template values are used as plain text.'|t('schemy') }}
+            {% endif %}
+        </p>
+        {{ schemy.editor({
+            id: id ~ '-editor',
+            type: editorType,
+            rows: editorRows,
+            typeName: name ~ '[type]',
+            propertiesName: name ~ '[properties]',
+            fieldOptions: fieldOptions,
+            templateHint: allowTwig ? '{title}' : 'Plain text'|t('schemy'),
+        }) }}
+    </div>
+
+    <details class="schemy-field-advanced" {{ value.extraJson ? 'open' }}>
+        <summary>{{ 'Additional JSON-LD'|t('schemy') }}</summary>
+        <textarea class="text fullwidth code" name="{{ name }}[extraJson]" rows="6" spellcheck="false" aria-label="{{ 'Additional JSON-LD'|t('schemy') }}" placeholder='{"@type": "FAQPage", "mainEntity": [...]}'>{{ value.extraJson }}</textarea>
+        <p class="light">{{ 'A JSON object or array of objects, added to the page graph as-is.'|t('schemy') }}</p>
+    </details>
+
+    {% if element and element.id %}
+        <div class="schemy-field-preview">
+            <button type="button" class="btn small" data-schemy-preview data-element-id="{{ element.id }}" data-site-id="{{ element.siteId }}">{{ 'Preview JSON-LD'|t('schemy') }}</button>
+            <span class="light">{{ 'Reflects the last saved or autosaved version.'|t('schemy') }}</span>
+            <pre class="schemy-preview-output code" data-schemy-preview-output hidden></pre>
+        </div>
+    {% endif %}
+</div>

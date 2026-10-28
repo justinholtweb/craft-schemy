@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Schemy">
+    <title>Schemy</title>
+    <!-- A pair of JSON braces around a three-node graph: the @graph Schemy writes. icon-mask.svg
+         is the same drawing without the plate, in currentColor, so keep the two in step. -->
+    <rect width="100" height="100" rx="22.44" fill="#5B4FD9"/>
+    <g fill="none" stroke="#FEFEFE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M 30 22 C 22 22 22 28 22 34 L 22 42 C 22 47 19 50 15 50 C 19 50 22 53 22 58 L 22 66 C 22 72 22 78 30 78"/>
+        <path d="M 70 22 C 78 22 78 28 78 34 L 78 42 C 78 47 81 50 85 50 C 81 50 78 53 78 58 L 78 66 C 78 72 78 78 70 78"/>
+        <path d="M 50 37 L 40 60 M 50 37 L 60 60" stroke-width="4"/>
+    </g>
+    <g fill="#FEFEFE">
+        <circle cx="50" cy="35" r="7"/>
+        <circle cx="39" cy="62" r="6"/>
+        <circle cx="61" cy="62" r="6"/>
+    </g>
+</svg>

@@ -1,0 +1,64 @@
+{% extends '_layouts/cp' %}
+{% import '_includes/forms' as forms %}
+{% import 'schemy/_includes/editor' as schemy %}
+
+{% set title = section.name %}
+{% set selectedSubnavItem = 'sections' %}
+{% set fullPageForm = not readOnly %}
+{% set crumbs = [
+    {label: 'Schemy'|t('schemy'), url: url('schemy')},
+    {label: 'Sections'|t('schemy'), url: url('schemy/sections')},
+] %}
+
+{% block content %}
+    {% include 'schemy/_includes/readonly' %}
+
+    {{ actionInput('schemy/sections/save') }}
+    {{ redirectInput('schemy/sections') }}
+    {{ hiddenInput('sectionId', section.id) }}
+
+    <h2>{{ 'Section default'|t('schemy') }}</h2>
+    <p class="light">{{ 'Applies to every entry in this section, unless its entry type or the entry itself overrides it. Leave the type blank for no schema.'|t('schemy') }}</p>
+
+    {{ schemy.editor({
+        id: 'schemy-section',
+        type: type,
+        rows: properties,
+        fieldOptions: fieldOptions,
+        allowEmptyType: true,
+    }) }}
+
+    {% if entryTypeConfigs|length %}
+        <hr>
+        <h2>{{ 'Entry type overrides'|t('schemy') }}</h2>
+        <p class="light">{{ 'Give an entry type its own schema within this section.'|t('schemy') }}</p>
+
+        {% for config in entryTypeConfigs %}
+            {% set et = config.entryType %}
+            {% set targetId = 'schemy-et-' ~ et.id %}
+            <div class="schemy-entry-type">
+                {{ forms.lightswitchField({
+                    label: 'Override for “{name}”'|t('schemy', {name: et.name}),
+                    name: 'entryTypes[' ~ et.uid ~ '][override]',
+                    on: config.override,
+                    toggle: targetId,
+                }) }}
+
+                <div id="{{ targetId }}" class="schemy-entry-type-body {{ not config.override ? 'hidden' }}">
+                    {{ schemy.editor({
+                        id: targetId ~ '-editor',
+                        type: config.type,
+                        rows: config.properties,
+                        typeName: 'entryTypes[' ~ et.uid ~ '][type]',
+                        propertiesName: 'entryTypes[' ~ et.uid ~ '][properties]',
+                        fieldOptions: config.fieldOptions,
+                    }) }}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% js %}
+        Schemy.initAll();
+    {% endjs %}
+{% endblock %}

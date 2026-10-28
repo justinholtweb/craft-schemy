@@ -1,0 +1,79 @@
+.schemy-editor [hidden],
+.schemy-field [hidden] {
+  display: none !important;
+}
+
+.schemy-rows td {
+  vertical-align: middle;
+}
+
+.schemy-rows .schemy-col-property {
+  width: 30%;
+}
+
+.schemy-rows .schemy-col-source {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.schemy-rows .schemy-col-value .select select {
+  width: 100%;
+}
+
+.schemy-editor [data-schemy-add] {
+  margin-top: 8px;
+}
+
+.schemy-editor [data-schemy-defaults] {
+  margin-top: 8px;
+  margin-inline-start: 4px;
+}
+
+.schemy-entry-type + .schemy-entry-type {
+  margin-top: 24px;
+}
+
+.schemy-entry-type-body {
+  margin-top: 12px;
+  padding-inline-start: 16px;
+  border-inline-start: 3px solid var(--gray-100, #e3e5e8);
+}
+
+.schemy-field-mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.schemy-field-mode .schemy-field-summary {
+  margin: 0;
+}
+
+.schemy-field-editor {
+  margin-top: 16px;
+}
+
+.schemy-field-advanced {
+  margin-top: 16px;
+}
+
+.schemy-field-advanced summary {
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.schemy-field-preview {
+  margin-top: 16px;
+}
+
+.schemy-preview-output {
+  margin-top: 8px;
+  max-height: 400px;
+  overflow: auto;
+  padding: 12px;
+  border-radius: 4px;
+  background: var(--gray-050, #f3f7fc);
+  font-size: 12px;
+  white-space: pre;
+}

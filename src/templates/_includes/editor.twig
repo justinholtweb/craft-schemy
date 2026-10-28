@@ -1,0 +1,117 @@
+{#
+ # Property mapping editor, shared by the section, identity, and field UIs.
+ #
+ # config:
+ #   id               Unique (un-namespaced) id for the editor
+ #   type             Current schema type
+ #   rows             Property rows ({property, source, value})
+ #   typeName         Input name for the type (default "type")
+ #   propertiesName   Input name prefix for the rows (default "properties")
+ #   fieldOptions     [{label, value}] for the Field source
+ #   allowFieldSource Whether rows can pull from fields (default true)
+ #   typeSuggestions  Type names offered in the autocomplete (default: every known type)
+ #   typeLabel        Label for the type input
+ #   typeInstructions Instructions for the type input
+ #   allowEmptyType   Show a hint that a blank type means "no schema" (default false)
+ #   templateHint     Placeholder for template inputs
+ #}
+
+{% macro editor(config) %}
+    {% import _self as self %}
+    {% set allowField = config.allowFieldSource ?? true %}
+
+    <div id="{{ config.id }}" class="schemy-editor" data-schemy-editor data-allow-field="{{ allowField ? 1 : 0 }}" data-type-suggestions="{{ (config.typeSuggestions ?? [])|json_encode }}">
+        <div class="field">
+            <div class="heading">
+                <label for="{{ config.id }}-type">{{ config.typeLabel ?? 'Schema type'|t('schemy') }}</label>
+            </div>
+            <div class="instructions">
+                <p>{{ config.typeInstructions ?? 'Start typing to pick a schema.org type, or enter any type name.'|t('schemy') }}</p>
+            </div>
+            <div class="input ltr">
+                <input type="text" class="text schemy-type-input" id="{{ config.id }}-type" name="{{ config.typeName ?? 'type' }}" value="{{ config.type }}" placeholder="{{ (config.allowEmptyType ?? false) ? 'None'|t('schemy') : 'Article' }}" autocomplete="off" spellcheck="false" data-schemy-type>
+            </div>
+        </div>
+
+        <div class="field">
+            <div class="heading">
+                <label>{{ 'Properties'|t('schemy') }}</label>
+            </div>
+            <div class="instructions">
+                <p>
+                    {% if allowField %}
+                        {{ 'Map each property to a field, or write a template. Use dots for nested values (`address.streetAddress`). Repeat a property to output a list.'|t('schemy')|md(inlineOnly=true) }}
+                    {% else %}
+                        {{ 'Values are Twig templates, e.g. `{{ siteName }}`. Use dots for nested values (`address.streetAddress`). Repeat a property to output a list.'|t('schemy')|md(inlineOnly=true) }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="input">
+                <table class="data fullwidth schemy-rows">
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Property'|t('schemy') }}</th>
+                            {% if allowField %}<th scope="col">{{ 'Source'|t('schemy') }}</th>{% endif %}
+                            <th scope="col">{{ 'Value'|t('schemy') }}</th>
+                            <th scope="col" class="thin"><span class="visually-hidden">{{ 'Remove'|t('app') }}</span></th>
+                        </tr>
+                    </thead>
+                    <tbody data-schemy-rows>
+                        {% for row in config.rows ?? [] %}
+                            {{ self.row(config, loop.index0, row) }}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <template data-schemy-row-template>{{ self.row(config, '__ROW__', {}) }}</template>
+                <button type="button" class="btn add icon dashed" data-schemy-add>{{ 'Add a property'|t('schemy') }}</button>
+                <button type="button" class="btn dashed" data-schemy-defaults>{{ 'Add suggested properties'|t('schemy') }}</button>
+            </div>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro row(config, index, row) %}
+    {% set allowField = config.allowFieldSource ?? true %}
+    {% set base = (config.propertiesName ?? 'properties') ~ '[' ~ index ~ ']' %}
+    {% set source = allowField ? (row.source ?? 'field') : 'template' %}
+    {% set value = row.value ?? '' %}
+    {% set fieldOptions = config.fieldOptions ?? [] %}
+
+    <tr data-schemy-row>
+        <td class="schemy-col-property">
+            <input type="text" class="text fullwidth code" name="{{ base }}[property]" value="{{ row.property ?? '' }}" placeholder="{{ 'property'|t('schemy') }}" aria-label="{{ 'Property'|t('schemy') }}" autocomplete="off" spellcheck="false" data-schemy-property>
+        </td>
+        {% if allowField %}
+            <td class="schemy-col-source">
+                <div class="select">
+                    <select name="{{ base }}[source]" aria-label="{{ 'Source'|t('schemy') }}" data-schemy-source>
+                        <option value="field" {{ source == 'field' ? 'selected' }}>{{ 'Field'|t('schemy') }}</option>
+                        <option value="template" {{ source == 'template' ? 'selected' }}>{{ 'Template'|t('schemy') }}</option>
+                    </select>
+                </div>
+            </td>
+        {% endif %}
+        <td class="schemy-col-value">
+            {% if allowField %}
+                {% set known = fieldOptions|column('value') %}
+                <div class="select fullwidth" data-schemy-field {{ source != 'field' ? 'hidden' }}>
+                    <select name="{{ base }}[field]" aria-label="{{ 'Field'|t('schemy') }}">
+                        <option value="">{{ 'Choose a field…'|t('schemy') }}</option>
+                        {% for option in fieldOptions %}
+                            <option value="{{ option.value }}" {{ source == 'field' and value == option.value ? 'selected' }}>{{ option.label }}</option>
+                        {% endfor %}
+                        {% if source == 'field' and value and value not in known %}
+                            <option value="{{ value }}" selected>{{ '{handle} (not in this layout)'|t('schemy', {handle: value}) }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+            {% else %}
+                <input type="hidden" name="{{ base }}[source]" value="template">
+            {% endif %}
+            <input type="text" class="text fullwidth code" name="{{ base }}[template]" value="{{ source == 'template' ? value }}" placeholder="{{ config.templateHint ?? '{{ entry.summary }}' }}" aria-label="{{ 'Template'|t('schemy') }}" autocomplete="off" spellcheck="false" data-schemy-template {{ source == 'field' ? 'hidden' }}>
+        </td>
+        <td class="thin">
+            <button type="button" class="delete icon" title="{{ 'Remove'|t('app') }}" aria-label="{{ 'Remove'|t('app') }}" data-schemy-remove></button>
+        </td>
+    </tr>
+{% endmacro %}

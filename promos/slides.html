@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<!-- handmade: hand-tuned deck -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Schemy — Plugin Store promos</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --charcoal: #0f0f1a;
+    --charcoal-light: #1a1a2e;
+    --charcoal-lighter: #252540;
+    --accent: #5B4FD9;
+    --accent-light: #A69DF6;
+    --gold: #ffd166;
+    --off-white: #f0f0f5;
+  }
+
+  html { background: #000; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--off-white);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- slide shell ---------------------------------------------------- */
+  .slide {
+    position: relative;
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 85% 15%, rgba(91, 79, 217, 0.34) 0%, transparent 40%),
+      radial-gradient(ellipse at 65% 5%,  rgba(166, 157, 246, 0.14) 0%, transparent 35%),
+      radial-gradient(ellipse at 15% 85%, rgba(255, 209, 102, 0.07) 0%, transparent 40%),
+      radial-gradient(ellipse at 35% 95%, rgba(91, 79, 217, 0.14) 0%, transparent 35%),
+      linear-gradient(135deg, #0f0f1a 0%, #12112a 30%, #161433 60%, #0f0f1a 100%);
+  }
+
+  /* Oversized watermark: one brace from the mark, anchored right and running off the edge.
+     See assets/watermark.svg for why the rest of the icon is stripped. */
+  .slide::after {
+    content: '';
+    position: absolute;
+    top: -6%;
+    right: -10%;
+    width: 1400px;
+    height: 1400px;
+    background: url('assets/watermark.svg') no-repeat center / contain;
+    opacity: 0.035;
+    pointer-events: none;
+  }
+
+  /* The cover has the icon itself; a watermark behind it reads as its shadow. */
+  .cover::after { display: none; }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-light), var(--gold), var(--accent));
+    z-index: 5;
+  }
+
+  .inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 118px 130px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ---- type ------------------------------------------------------------ */
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: rgba(240, 240, 245, 0.62);
+    margin-bottom: 34px;
+  }
+  .eyebrow .rule {
+    width: 58px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-light);
+  }
+
+  h1, h2 {
+    font-family: 'Jersey 20', sans-serif;
+    font-weight: 400;
+    line-height: 0.9;
+    letter-spacing: 0.005em;
+  }
+
+  .gradient-text {
+    background: linear-gradient(100deg, #7C70F0 0%, #A69DF6 38%, #ffd166 68%, #7C70F0 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .lede {
+    font-size: 34px;
+    line-height: 1.5;
+    color: rgba(240, 240, 245, 0.72);
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+
+  /* ---- cover ----------------------------------------------------------- */
+  .cover .inner { gap: 90px; }
+  .cover .copy { flex: 1 1 auto; }
+  .cover h1 { font-size: 168px; margin-bottom: 26px; }
+  .cover .tagline {
+    font-size: 46px;
+    line-height: 1.25;
+    color: rgba(240, 240, 245, 0.78);
+    margin-bottom: 46px;
+    max-width: 900px;
+  }
+  .cover .badges { display: flex; gap: 18px; align-items: center; }
+  .badge {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 14px 26px;
+    border-radius: 999px;
+    border: 2px solid rgba(166, 157, 246, 0.45);
+    color: rgba(240, 240, 245, 0.85);
+  }
+  .badge.free { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .cover .mark { flex: 0 0 auto; }
+  .cover .mark img { width: 420px; height: 420px; display: block; }
+
+  /* ---- feature slides -------------------------------------------------- */
+  .feature .inner { padding-right: 0; }
+  .feature .copy { width: 760px; flex: 0 0 auto; }
+  .feature h2 { font-size: 96px; margin-bottom: 30px; }
+  .feature .lede { max-width: 700px; }
+
+  .points { list-style: none; margin-top: 40px; display: flex; flex-direction: column; gap: 20px; }
+  .points li {
+    display: flex;
+    gap: 16px;
+    font-size: 25px;
+    line-height: 1.4;
+    color: rgba(240, 240, 245, 0.6);
+  }
+  .points li svg { flex: 0 0 auto; margin-top: 4px; }
+
+  /* ---- screenshot slabs ------------------------------------------------ */
+  .shot {
+    position: absolute;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .shot .chrome {
+    height: 40px;
+    background: #2a2a3e;
+    background-image:
+      radial-gradient(circle at 24px 20px, #ff5f57 6px, transparent 6.5px),
+      radial-gradient(circle at 48px 20px, #ffbd2e 6px, transparent 6.5px),
+      radial-gradient(circle at 72px 20px, #28ca42 6px, transparent 6.5px);
+  }
+  .shot .viewport { overflow: hidden; background: #e4edf6; position: relative; }
+  .shot img { display: block; width: 100%; position: absolute; left: 0; }
+
+  .caption {
+    font-size: 22px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(240, 240, 245, 0.5);
+    margin-bottom: 14px;
+  }
+  .caption b { color: var(--accent-light); font-weight: 600; }
+
+  /* ---- before / after -------------------------------------------------- */
+  .compare .inner { flex-direction: column; align-items: flex-start; padding-bottom: 60px; }
+  .compare h2 { font-size: 88px; margin-bottom: 18px; }
+  .compare .lede { font-size: 30px; max-width: 1280px; margin-bottom: 44px; }
+  .compare .pair { display: flex; gap: 56px; width: 100%; }
+  .compare .pane { flex: 1 1 0; min-width: 0; }
+  .compare .shot { position: relative; }
+
+  .arrow {
+    position: absolute;
+    left: 50%;
+    top: 640px;
+    transform: translateX(-50%);
+    z-index: 4;
+    width: 92px;
+    height: 92px;
+    border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 12px 40px rgba(91, 79, 217, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ---- closing panel --------------------------------------------------- */
+  .closing .inner { flex-direction: column; align-items: flex-start; justify-content: center; }
+  .closing h2 { font-size: 104px; margin-bottom: 34px; }
+  .closing .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 26px 54px;
+    margin-top: 20px;
+    width: 1660px;
+  }
+  .closing .cell {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    background: rgba(37, 37, 64, 0.42);
+    padding: 28px 32px;
+  }
+  .closing .cell b { display: block; font-size: 28px; margin-bottom: 8px; color: var(--off-white); }
+  .closing .cell span { font-size: 23px; line-height: 1.45; color: rgba(240, 240, 245, 0.58); }
+
+  /* ---- layout diagram slide -------------------------------------------- */
+  .diagram {
+    position: absolute;
+    right: 130px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 800px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(15, 15, 26, 0.72);
+    padding: 44px 48px;
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    font-size: 26px;
+    line-height: 1.65;
+    color: rgba(240, 240, 245, 0.72);
+    white-space: pre;
+  }
+  .diagram .tab { color: var(--off-white); font-weight: 600; }
+  .diagram .marker { color: var(--accent-light); }
+  .diagram .dim { color: rgba(240, 240, 245, 0.38); }
+  .diagram .gold { color: var(--gold); }
+
+  /* ---- footer lockup --------------------------------------------------- */
+  .footer {
+    position: absolute;
+    left: 130px;
+    bottom: 54px;
+    z-index: 4;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 22px;
+    color: rgba(240, 240, 245, 0.42);
+  }
+  .footer img { width: 40px; height: 40px; border-radius: 9px; }
+  .footer b { color: rgba(240, 240, 245, 0.72); font-weight: 600; }
+
+  /* Only render the requested slide when screenshotting */
+  body.single .slide { display: none; }
+  body.single .slide.active { display: block; }
+
+  /* ---- control-panel screenshot cards -------------------------------
+     Self-contained: these cards must drop into any deck in the family, and the decks
+     do not share a class system. Only --accent and --off-white are relied on, both of
+     which every deck defines, and both have fallbacks. */
+  .slide.cpcard { display: block; }
+  .cpcard .cpc-inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    padding: 112px 90px 112px 120px;
+    display: flex;
+    align-items: center;
+    gap: 60px;
+  }
+  .cpcard .cpc-copy { width: 560px; flex: 0 0 560px; }
+
+  .cpcard .cpc-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 34px;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent-light, #7aa2c8);
+  }
+  .cpcard .cpc-eyebrow i {
+    display: block;
+    width: 62px;
+    height: 3px;
+    background: var(--accent-light, #7aa2c8);
+    border-radius: 2px;
+  }
+
+  .cpcard .cpc-h2 {
+    font-family: 'Jersey 20', 'Inter', sans-serif;
+    font-size: 88px;
+    line-height: 0.96;
+    font-weight: 400;
+    letter-spacing: 0.005em;
+    margin: 0 0 28px;
+    color: var(--off-white, #f0f0f5);
+  }
+
+  .cpcard .cpc-lede {
+    font-size: 33px;
+    line-height: 1.42;
+    color: rgba(240, 240, 245, 0.66);
+    margin: 0;
+  }
+
+  .cpcard .cpc-points { list-style: none; margin: 40px 0 0; padding: 0; }
+  .cpcard .cpc-points li {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    font-size: 26px;
+    line-height: 1.5;
+    color: rgba(240, 240, 245, 0.72);
+    margin-bottom: 18px;
+  }
+  .cpcard .cpc-points li::before {
+    content: '';
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    margin-top: 14px;
+    border-radius: 50%;
+    background: var(--accent, #7aa2c8);
+  }
+
+  .cpcard .cpc-panel { flex: 1 1 auto; min-width: 0; }
+
+  .cpcard .cpc-frame {
+    border-radius: 14px;
+    overflow: hidden;
+    background: #e4edf6;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), 0 6px 18px rgba(0, 0, 0, 0.35);
+  }
+  .cpcard .cpc-chrome {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 13px 18px;
+    background: linear-gradient(180deg, #2a2a3d 0%, #21212f 100%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  }
+  .cpcard .cpc-chrome b { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.16); }
+  .cpcard .cpc-chrome b:nth-child(1) { background: #ff5f57; }
+  .cpcard .cpc-chrome b:nth-child(2) { background: #febc2e; }
+  .cpcard .cpc-chrome b:nth-child(3) { background: #28c840; }
+  .cpcard .cpc-chrome em {
+    margin-left: 12px;
+    font-style: normal;
+    font-size: 19px;
+    letter-spacing: 0.02em;
+    color: rgba(240, 240, 245, 0.45);
+  }
+  .cpcard .cpc-frame img { display: block; width: 100%; height: auto; }
+
+  /* A tall capture is anchored to its top — the interesting rows are always first.
+     The fade makes the cut read as "there is more" rather than as a broken edge. */
+  .cpcard .cpc-frame.cpc-clip { max-height: 720px; position: relative; }
+  .cpcard .cpc-frame.cpc-clip img { object-fit: cover; object-position: top center; max-height: 680px; }
+  .cpcard .cpc-frame.cpc-clip::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 130px;
+    background: linear-gradient(180deg, rgba(228,237,246,0) 0%, rgba(228,237,246,0.92) 78%, #e4edf6 100%);
+  }
+
+  .cpcard .cpc-caption {
+    display: block;
+    margin-top: 20px;
+    font-size: 22px;
+    line-height: 1.45;
+    color: rgba(240, 240, 245, 0.52);
+  }
+  .cpcard .cpc-caption b { color: rgba(240, 240, 245, 0.80); font-weight: 600; }
+
+
+  
+  /* ---- suite vs schemy (slide 2) --------------------------------------- */
+  .limits {
+    position: absolute; right: 120px; top: 50%; transform: translateY(-50%);
+    width: 860px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.09);
+    background: rgba(15, 15, 26, 0.72); padding: 40px 44px;
+  }
+  .limits table { width: 100%; border-collapse: collapse; }
+  .limits th, .limits td { text-align: left; padding: 20px 10px; font-size: 26px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .limits thead th { white-space: nowrap; font-size: 17px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(240,240,245,0.45); font-weight: 600; padding-top: 0; }
+  .limits thead th.col { text-align: center; }
+  .limits td.name { color: var(--off-white); font-weight: 600; }
+  .limits td.name small { display: block; font-weight: 400; font-size: 19px; color: rgba(240,240,245,0.45); margin-top: 4px; }
+  .limits .no, .limits .yes, .limits .dim { text-align: center; font-size: 30px; font-weight: 700; width: 170px; }
+  .limits .no { color: rgba(240,240,245,0.28); }
+  .limits .yes { color: #5ee0a0; }
+  .limits .dim { color: rgba(240,240,245,0.62); }
+  .limits tr.focus td { border-top: 2px solid rgba(166,157,246,0.5); }
+  .limits tr.focus td.name { color: var(--accent-light); }
+  .limits tr:last-child td { border-bottom: 0; }
+
+  /* ---- mapping → graph (slide 3) --------------------------------------- */
+  .flow { position: absolute; right: 100px; top: 50%; transform: translateY(-50%); width: 1000px; display: flex; flex-direction: column; gap: 26px; }
+  .map, .json { border-radius: 14px; border: 1px solid rgba(255,255,255,0.09); background: rgba(15,15,26,0.78); }
+  .map { padding: 26px 36px; display: grid; grid-template-columns: 250px 40px 1fr; row-gap: 12px; align-items: center; font-size: 23px; }
+  .map .p { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; color: var(--off-white); }
+  .map .a { color: var(--accent-light); text-align: center; }
+  .map .f { color: rgba(240,240,245,0.62); }
+  .json { padding: 30px 36px; font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace; font-size: 20px; line-height: 1.6; color: rgba(240,240,245,0.62); white-space: pre; }
+  .json .k { color: var(--accent-light); }
+  .json .s { color: rgba(240,240,245,0.86); }
+  .json .t { color: var(--gold); }
+  .json .id { color: #5ee0a0; }
+
+  /* ---- the cascade (slide 4) ------------------------------------------- */
+  .levels { position: absolute; right: 120px; top: 50%; transform: translateY(-50%); width: 880px; display: flex; flex-direction: column; gap: 0; }
+  .level { border-radius: 14px; border: 1px solid rgba(255,255,255,0.09); background: rgba(15,15,26,0.72); padding: 28px 36px; }
+  .level .row1 { display: flex; align-items: baseline; justify-content: space-between; }
+  .level b { font-size: 32px; color: var(--off-white); }
+  .level code { font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace; font-size: 23px; color: var(--accent-light); }
+  .level span { display: block; margin-top: 8px; font-size: 22px; color: rgba(240,240,245,0.52); }
+  .level.last { border-color: var(--accent-light); background: rgba(91,79,217,0.18); }
+  .step { height: 46px; display: flex; align-items: center; padding-left: 48px; gap: 16px; font-size: 20px; color: rgba(240,240,245,0.45); }
+  .step::before { content: ''; width: 2px; height: 100%; background: linear-gradient(180deg, rgba(166,157,246,0.15), rgba(166,157,246,0.7)); }
+  .rules { margin-top: 30px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .rules div { border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); padding: 18px 20px; font-size: 20px; line-height: 1.4; color: rgba(240,240,245,0.55); }
+  .rules div b { display: block; font-size: 22px; margin-bottom: 4px; color: var(--off-white); }
+</style>
+</head>
+<body>
+
+<!-- 1 · Cover ============================================================ -->
+<section class="slide cover" data-n="1">
+  <div class="inner">
+    <div class="copy">
+      <div class="eyebrow"><span class="rule"></span> Craft CMS 5</div>
+      <h1 class="gradient-text">Schemy</h1>
+      <p class="tagline">Schema.org JSON-LD for sections,<br>entry types and entries.</p>
+      <div class="badges">
+        <span class="badge free">Free</span>
+        <span class="badge">No SEO suite</span>
+        <span class="badge">No tables</span>
+      </div>
+    </div>
+    <div class="mark"><img src="assets/icon.svg" alt=""></div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 2 · Just the structured data ========================================= -->
+<section class="slide feature" data-n="2">
+  <div class="inner">
+    <div class="copy" style="width: 720px;">
+      <div class="eyebrow"><span class="rule"></span> The problem</div>
+      <h2>Structured data,<br>and nothing else</h2>
+      <p class="lede" style="max-width: 680px;">Most sites that want schema.org markup install a whole SEO suite to get it. Schemy is only the JSON-LD.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A69DF6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span class="t">Keep the meta tags you already have</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A69DF6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span class="t">Nothing else in your &lt;head&gt; changes</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="limits">
+    <table>
+      <thead><tr><th>Adds</th><th class="col">SEO suite</th><th class="col">Schemy</th></tr></thead>
+      <tbody>
+        <tr><td class="name">Meta titles &amp; descriptions</td><td class="dim">✓</td><td class="no">—</td></tr>
+        <tr><td class="name">Sitemaps &amp; robots.txt</td><td class="dim">✓</td><td class="no">—</td></tr>
+        <tr><td class="name">Social cards</td><td class="dim">✓</td><td class="no">—</td></tr>
+        <tr><td class="name">Database tables<small>and a settings tree to match</small></td><td class="dim">✓</td><td class="no">—</td></tr>
+        <tr class="focus"><td class="name">Schema.org JSON-LD<small>per section, entry type and entry</small></td><td class="dim">✓</td><td class="yes">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 3 · Fields in, a linked graph out ===================================== -->
+<section class="slide feature" data-n="3">
+  <div class="inner">
+    <div class="copy" style="width: 640px;">
+      <div class="eyebrow"><span class="rule"></span> How it works</div>
+      <h2>Fields in,<br>a linked<br>graph out</h2>
+      <p class="lede" style="max-width: 600px;">Map a property to a field you already have. Schemy shapes each value for the property it fills.</p>
+      <ul class="points">
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A69DF6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span class="t">Assets become ImageObjects</span></li>
+        <li><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#A69DF6" stroke-width="3"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/></svg> <span class="t">Every node linked by @id</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="map">
+      <span class="p">headline</span><span class="a">←</span><span class="f">Title</span>
+      <span class="p">datePublished</span><span class="a">←</span><span class="f">Post Date</span>
+      <span class="p">image</span><span class="a">←</span><span class="f">Featured image</span>
+      <span class="p">author</span><span class="a">←</span><span class="f">Byline</span>
+    </div>
+    <div class="json">{ <span class="k">"@type"</span>: <span class="t">"NewsArticle"</span>,
+  <span class="k">"headline"</span>: <span class="s">"Harbour terminal cuts berth waits"</span>,
+  <span class="k">"datePublished"</span>: <span class="s">"2026-08-24T06:07:02-07:00"</span>,
+  <span class="k">"image"</span>: { <span class="k">"@type"</span>: <span class="t">"ImageObject"</span>, <span class="k">"width"</span>: 1600, … },
+  <span class="k">"author"</span>: { <span class="k">"@type"</span>: <span class="t">"Person"</span>, <span class="k">"name"</span>: <span class="s">"Marta Okonkwo"</span> },
+  <span class="k">"publisher"</span>: { <span class="k">"@id"</span>: <span class="id">"https://example.com/#identity"</span> } }</div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 4 · Three levels ===================================================== -->
+<section class="slide feature" data-n="4">
+  <div class="inner">
+    <div class="copy" style="width: 660px;">
+      <div class="eyebrow"><span class="rule"></span> Three levels</div>
+      <h2>Set it once.<br>Change it<br>where it differs.</h2>
+      <p class="lede" style="max-width: 620px;">A section sets the default, an entry type can replace it, and any entry can customize its own.</p>
+    </div>
+  </div>
+  <div class="levels">
+    <div class="level"><div class="row1"><b>Section</b><code>Article</code></div><span>Every entry in the section, or the single itself.</span></div>
+    <div class="step">unless the entry type overrides it</div>
+    <div class="level"><div class="row1"><b>Entry type</b><code>Product</code></div><span>A review entry type in the same section gets its own.</span></div>
+    <div class="step">unless the entry customizes it</div>
+    <div class="level last"><div class="row1"><b>Entry</b><code>headline</code></div><span>One property changed. The rest is still inherited.</span></div>
+    <div class="rules">
+      <div><b>Same type</b>layers on top of what it inherits</div>
+      <div><b>New type</b>starts from a clean slate</div>
+      <div><b>Disable</b>drops the entry&rsquo;s own node, nothing else</div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 5 · Section screen (real CP screenshot) ============================== -->
+<section class="slide cpcard" data-n="5">
+  <div class="cpc-inner">
+    <div class="cpc-copy">
+      <div class="cpc-eyebrow"><i></i> In the control panel</div>
+      <h2 class="cpc-h2">Pick a type,<br>map its fields</h2>
+      <p class="cpc-lede">Start typing a schema.org type, then map each property to a field or a short template.</p>
+      <ul class="cpc-points">
+        <li>Add suggested properties fills in the common ones</li>
+        <li>Dot paths for nested values, repeats for lists</li>
+      </ul>
+    </div>
+    <div class="cpc-panel">
+      <figure class="cpc-frame cpc-clip">
+        <div class="cpc-chrome"><b></b><b></b><b></b><em>Schemy → Sections → News</em></div>
+        <img src="shots/schemy-section.png" alt="">
+      </figure>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 6 · One entry (real CP screenshot) =================================== -->
+<section class="slide cpcard" data-n="6">
+  <div class="cpc-inner">
+    <div class="cpc-copy">
+      <div class="cpc-eyebrow"><i></i> On the entry</div>
+      <h2 class="cpc-h2">One entry,<br>its own headline</h2>
+      <p class="cpc-lede">A Schemy field lets an author inherit, customize or disable the schema for one entry.</p>
+      <ul class="cpc-points">
+        <li>Preview the JSON-LD in place</li>
+        <li>Paste extra nodes, like an FAQPage</li>
+      </ul>
+    </div>
+    <div class="cpc-panel">
+      <figure class="cpc-frame cpc-clip">
+        <div class="cpc-chrome"><b></b><b></b><b></b><em>Entries → News → Schema field</em></div>
+        <img src="shots/schemy-entry.png" alt="">
+      </figure>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<!-- 7 · Automatic, until you want it not to be ============================ -->
+<section class="slide closing" data-n="7">
+  <div class="inner">
+    <div class="eyebrow"><span class="rule"></span> Free, and out of the way</div>
+    <h2>Automatic, until you<br>want it not to be</h2>
+    <div class="grid">
+      <div class="cell"><b>Writes itself into &lt;head&gt;</b><span>One graph per page: your organization, the website, breadcrumbs and the entry, all linked by @id.</span></div>
+      <div class="cell"><b>Templates can take over</b><span><span class="mono">craft.schemy</span> can render, add a node, describe a custom route or switch the output off.</span></div>
+      <div class="cell"><b>Can't break a page</b><span>Content containing &lt;/script&gt; is escaped, and a broken template value is logged and skipped.</span></div>
+      <div class="cell"><b>Nothing extra</b><span>No tables, no outbound requests. Settings live in project config and deploy with the site.</span></div>
+    </div>
+  </div>
+  <div class="footer"><img src="assets/icon.svg" alt=""> <b>Schemy</b> &nbsp;·&nbsp; justinholt.com/plugins/craft-schemy</div>
+</section>
+
+<script>
+  var n = new URLSearchParams(location.search).get('s');
+  if (n) {
+    document.body.classList.add('single');
+    var el = document.querySelector('.slide[data-n="' + n + '"]');
+    if (el) el.classList.add('active');
+  }
+</script>
+</body>
+</html>

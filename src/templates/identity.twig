@@ -1,0 +1,44 @@
+{% extends '_layouts/cp' %}
+{% import 'schemy/_includes/editor' as schemy %}
+
+{% set title = 'Site Identity'|t('schemy') %}
+{% set selectedSubnavItem = 'identity' %}
+{% set fullPageForm = not readOnly %}
+
+{% block content %}
+    {% include 'schemy/_includes/readonly' %}
+
+    {{ actionInput('schemy/settings/save-identity') }}
+    {{ redirectInput('schemy/identity') }}
+
+    <p class="light">
+        {{ 'Describes who is behind the site. It’s output on every page and set as the `publisher` of articles and other creative works. Values are rendered per site, so `{{ siteName }}` and `{{ currentSite.handle }}` work as expected.'|t('schemy')|md(inlineOnly=true) }}
+    </p>
+
+    {{ schemy.editor({
+        id: 'schemy-identity',
+        type: settings.identityType,
+        rows: settings.identity,
+        allowFieldSource: false,
+        typeSuggestions: identityTypes,
+        typeLabel: 'Identity type'|t('schemy'),
+        typeInstructions: 'Usually Organization, a more specific business type, or Person.'|t('schemy'),
+        templateHint: '{{ siteUrl }}',
+    }) }}
+
+    <div class="readable">
+        <h3>{{ 'Examples'|t('schemy') }}</h3>
+        <table class="data fullwidth">
+            <tbody>
+                <tr><td><code>logo</code></td><td><code>{{ "{{ craft.assets.filename('logo.png').one().url ?? '' }}" }}</code></td></tr>
+                <tr><td><code>sameAs</code></td><td><code>https://www.linkedin.com/company/example</code></td></tr>
+                <tr><td><code>address.@type</code></td><td><code>PostalAddress</code></td></tr>
+                <tr><td><code>address.addressLocality</code></td><td><code>Portland</code></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    {% js %}
+        Schemy.initAll();
+    {% endjs %}
+{% endblock %}

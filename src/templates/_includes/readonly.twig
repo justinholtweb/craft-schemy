@@ -1,0 +1,8 @@
+{% if readOnly %}
+    <div class="readable">
+        <blockquote class="note warning">
+            <p>{{ 'Schemy settings are stored in project config, and <code>allowAdminChanges</code> is disabled in this environment. Make changes in your development environment and deploy them.'|t('schemy')|raw }}</p>
+        </blockquote>
+    </div>
+    <hr>
+{% endif %}

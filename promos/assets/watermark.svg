@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Slide watermark: the right brace from src/icon-mask.svg, in white, with the plate, the left
+       brace and the graph stripped. At watermark scale the three nodes read as grey blobs and a
+       pair of braces frames the headline like a UI box; one brace alone still reads as JSON. -->
+  <path fill="none" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"
+        d="M 74 12 C 85 12 85 20 85 28 L 85 40 C 85 46 89 50 94 50 C 89 50 85 54 85 60 L 85 72 C 85 80 85 88 74 88"/>
+</svg>
