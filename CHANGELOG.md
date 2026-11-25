@@ -1,5 +1,25 @@
 # Release Notes for Schemy
 
+## 6.0.0-beta.1 - 2026-11-25
+
+The Craft 6 line: a native port with no `craftcms/yii2-adapter`. Requires Craft 6.0.0-beta.1 and PHP 8.5. See the
+[upgrade guide](https://github.com/justinholtweb/craft-schemy/blob/6.0.0/UPGRADING.md).
+
+### Added
+- Blade support: `$craft->schemy()` mirrors `craft.schemy`, and automatic output works in Blade layouts with `@craftHead`.
+- A **Schema** row in the entry sidebar with the main type and a validation summary, linking to the validator.
+- The validator takes an entry's ID, URI or full URL.
+- Authenticated GraphQL schemas are supported; the `schemy` query returns only entries the schema's user can view.
+
+### Changed
+- Everything from 5.1.0 carries over: validator, GraphQL, MCP tools, and the sidebar label and icon.
+- The Schema field's editor and the Sections and Site Identity screens are built from Craft 6's own controls.
+- General settings moved to **Settings → Plugins → Schemy**.
+- `GraphEvent` / `Schema::EVENT_BEFORE_RENDER_GRAPH` is now the `GraphResolving` event, dispatched with Laravel's events.
+- The console command is `php artisan schemy:validate`; `schemy/validate` remains as an alias. It exits 1 on errors.
+- Per-entry Twig, when a field allows it, renders in Twig's sandbox.
+- Namespace `justinholtweb\schemy` → `JustinHoltWeb\Schemy`. An upgrade migration renames the stored field type.
+
 ## 5.1.0 - 2026-11-25
 
 ### Added

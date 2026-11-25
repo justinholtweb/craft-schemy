@@ -1,9 +1,11 @@
 {
     "name": "justinholtweb/craft-schemy",
-    "description": "Schema.org JSON-LD for Craft CMS sections, entry types and individual entries, without the rest of an SEO suite. Map the fields you already have to the structured data search engines read.",
-    "version": "5.1.0",
+    "description": "Schema.org JSON-LD for Craft CMS 6 sections, entry types and individual entries, without the rest of an SEO suite. Map the fields you already have to the structured data search engines read.",
+    "version": "6.0.0-beta.1",
     "type": "craft-plugin",
     "keywords": [
+        "craft",
+        "cms",
         "craftcms",
         "craft-plugin",
         "schema",
@@ -26,32 +28,36 @@
         "source": "https://github.com/justinholtweb/craft-schemy",
         "issues": "https://github.com/justinholtweb/craft-schemy/issues"
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "beta",
     "prefer-stable": true,
     "require": {
-        "php": "^8.2",
+        "php": "^8.5",
+        "ext-dom": "*",
         "ext-json": "*",
-        "craftcms/cms": "^5.12.1"
+        "craftcms/cms": "^6.0.0-beta.1"
     },
     "require-dev": {
-        "craftcms/ecs": "dev-main",
-        "craftcms/phpstan": "dev-main",
-        "phpstan/phpstan": "^1.12"
+        "larastan/larastan": "^3.13",
+        "laravel/pint": "^1.22",
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0",
+        "phpstan/phpstan": "^2.1"
     },
     "autoload": {
         "psr-4": {
-            "justinholtweb\\schemy\\": "src/"
+            "JustinHoltWeb\\Schemy\\": "src/"
         }
     },
     "config": {
-        "sort-packages": true,
-        "platform": {
-            "php": "8.2"
-        },
         "allow-plugins": {
             "craftcms/plugin-installer": true,
-            "yiisoft/yii2-composer": true
-        }
+            "pestphp/pest-plugin": true
+        },
+        "platform": {
+            "php": "8.5"
+        },
+        "sort-packages": true
     },
     "extra": {
         "name": "Schemy",
@@ -59,7 +65,18 @@
         "developer": "Justin Holt",
         "developerUrl": "https://justinholt.com",
         "documentationUrl": "https://justinholt.com/plugins/craft-schemy/docs",
-        "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-schemy/main/CHANGELOG.md",
-        "class": "justinholtweb\\schemy\\Plugin"
+        "changelogUrl": "https://raw.githubusercontent.com/justinholtweb/craft-schemy/6.0.0/CHANGELOG.md",
+        "class": "JustinHoltWeb\\Schemy\\Plugin"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JustinHoltWeb\\Schemy\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "phpstan": "phpstan analyse --memory-limit=1G",
+        "check-cs": "pint --test",
+        "fix-cs": "pint"
     }
 }

@@ -1,0 +1,68 @@
+{# Utilities → Schema Validator. Rendered by ValidatorUtility::contentHtml(). #}
+<div class="schemy-validator">
+    <p class="light">
+        {{ 'Checks JSON-LD for broken structure, likely typos, badly formed dates and URLs, and properties that Google’s rich results need. It runs on this server and sends nothing anywhere. Google’s Rich Results Test is still the final word.'|t('schemy') }}
+    </p>
+
+    <form method="post" action="{{ action }}">
+        {{ csrfInput() }}
+        {% if site %}<input type="hidden" name="site" value="{{ site }}">{% endif %}
+
+        {{ craft.cp.field(craft.cp.text({name: 'entry', id: 'schemy-entry', value: entry, placeholder: '42, news/launch or https://…'}), {
+            label: 'Entry'|t('app'),
+            instructions: 'Validate what Schemy outputs for an entry: its ID, URI or full URL.'|t('schemy'),
+            id: 'schemy-entry',
+        })|raw }}
+
+        {{ craft.cp.field(craft.cp.textarea({name: 'json', id: 'schemy-json', value: pasted, rows: 10, class: 'code', placeholder: '{"@context": "https://schema.org", "@type": "Article", …}'}), {
+            label: 'Or paste JSON-LD'|t('schemy'),
+            instructions: 'Used when no entry is given. A `<script>` tag around the JSON is fine.'|t('schemy'),
+            id: 'schemy-json',
+        })|raw }}
+
+        <p><button type="submit" class="btn submit">{{ 'Validate'|t('schemy') }}</button></p>
+    </form>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
+
+    {% if result %}
+        <hr>
+        <h2>
+            {% if result.errors == 0 and result.warnings == 0 and result.notices == 0 %}
+                {{ 'No issues found.'|t('schemy') }}
+            {% else %}
+                {{ '{errors, plural, =1{# error} other{# errors}}, {warnings, plural, =1{# warning} other{# warnings}}, {notices, plural, =1{# notice} other{# notices}}'|t('schemy', {errors: result.errors, warnings: result.warnings, notices: result.notices}) }}
+            {% endif %}
+        </h2>
+
+        {% if result.issues %}
+            <table class="data fullwidth">
+                <thead>
+                    <tr>
+                        <th scope="col">{{ 'Severity'|t('schemy') }}</th>
+                        <th scope="col">{{ 'Where'|t('schemy') }}</th>
+                        <th scope="col">{{ 'Issue'|t('schemy') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for issue in result.issues %}
+                        <tr>
+                            <td><strong class="schemy-severity schemy-severity-{{ issue.severity }}">{{ issue.severity|t('schemy')|upper }}</strong></td>
+                            <td><code>{{ issue.path }}</code></td>
+                            <td>{{ issue.messageHtml|raw }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+
+        {% if json %}
+            <details style="margin-top: 16px">
+                <summary>{{ 'JSON-LD'|t('schemy') }}</summary>
+                <pre class="code" style="white-space: pre; overflow: auto; max-height: 480px; padding: 12px">{{ json }}</pre>
+            </details>
+        {% endif %}
+    {% endif %}
+</div>

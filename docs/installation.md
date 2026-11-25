@@ -7,14 +7,14 @@ summary: Requirements, install, and the first schema on the page.
 
 ## Requirements
 
-- Craft CMS 5.12.1 or later (Schemy 5.0.0 supports any Craft 5)
+- Craft CMS 6.0.0-beta.1 or later, and PHP 8.5 (Schemy 5.x supports Craft 5)
 - PHP 8.2 or later
 
 ## Install
 
 ```sh
 composer require justinholtweb/craft-schemy
-php craft plugin/install schemy
+php artisan craft:plugin:install schemy
 ```
 
 Or find **Schemy** in the Craft Plugin Store and install it from there.

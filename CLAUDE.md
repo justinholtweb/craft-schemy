@@ -6,88 +6,70 @@ Schemy adds schema.org JSON-LD to Craft sites, set per section (singles included
 per entry, without any of the rest of an SEO suite: no meta tags, no sitemap, no redirects. Distributed
 as `justinholtweb/craft-schemy`. **Free, under the Craft License, with no editions and no licensing code.**
 
+## Branches
+
+`6.0.0` (this branch, worktree `~/Sites/craft6-ports/craft-schemy`) is the Craft 6 line: a native port,
+no `craftcms/yii2-adapter`, following the family plan in `~/Sites/plugin-testing-craft6/PLAN.md` and
+`porting/COOKBOOK.md`. Craft 5 work happens on the 5.x branch in `~/Sites/craft-schemy`.
+
 ## Tech Stack
 
-- **PHP 8.2+**, **Craft CMS 5.12.1+** (MCP and `InputSchemaFieldInterface`), Yii2, Twig
-- No build step, no database tables, no outbound HTTP. One classic IIFE in
-  `src/web/assets/cp/dist/schemy.js`.
+- **PHP 8.5**, **Craft CMS 6** (Laravel 13), Twig and Blade
+- No build step, no database tables, no outbound HTTP. CP screens and the field editor are built from
+  Craft's Ui controls; the only asset is `resources/css/cp.css`.
 
 ## Architecture
 
-### Namespace & package
-
-- Namespace: `justinholtweb\schemy`
-- Package: `justinholtweb/craft-schemy`
-- Handle: `schemy`
+- Namespace `JustinHoltWeb\Schemy`, package `justinholtweb/craft-schemy`, handle `schemy`
+- `Plugin` registers through properties (`$fieldTypes`, `$utilities`, `$gqlQueries`, `$commands`,
+  `$events`, `$styles`) and `boot()` (MCP `CapabilityRegistry`, `CraftVariable::macro('schemy')`,
+  the GraphQL schema component). CP routes are in `routes/cp.php`.
+- `Services\Schema` is `#[Scoped]` (per-request template state); `Services\Validator` is a singleton.
+  Resolve both from the container.
 
 ### Where config lives
 
-- **Sections and entry types**: plugin settings in project config, `sections` keyed by section UID →
-  `{type, properties, entryTypes: {entryTypeUid: {override, type, properties}}}`. Entry types are
-  keyed inside their section because Craft 5 shares entry types across sections.
-- **Site identity and general switches**: also plugin settings.
-- **Per entry**: the `SchemaField` value (`models\SchemaOverride`, a JSON column) with mode
-  `inherit | override | disable`, its own type and properties, and `extraJson`.
+Same as 5.x: `sections` keyed by section UID → `{type, properties, entryTypes: {entryTypeUid:
+{override, type, properties}}}`, plus identity, switches and `navLabel`/`navIcon`/`navIconSvg`, all
+in plugin settings (project config). Per entry: the `SchemaField` value (`Models\SchemaOverride`).
+Save settings through `Schema::saveSettings()`: Craft applies values before validating, and it rolls
+a rejected save back.
 
-`savePluginSettings()` writes only the keys it's given, so every save goes through
-`Schema::saveSettings()`, which merges into `getSettings()->toArray()`. Pass a partial array to
-`savePluginSettings()` directly and the other settings are lost.
+### Resolution and merge
 
-### Resolution and merge (`services\Schema`)
-
-Entry field → entry type override → section. An entry override with the **same** type layers its
-properties onto the inherited ones. A **different** type starts fresh. Disable drops only the entry's
-own node; identity, WebSite, breadcrumbs and extra JSON stay. `promos/slides.html` slide 4 describes
-this rule, so update it if the rule changes.
-
-Property rows are `{property, source: field|template, value}` (`helpers\PropertyRows::normalize()`),
-with dot paths for nested values and `@`-keys allowed. Field values are shaped by the property's
-kind in `helpers\SchemaTypes` (date, image, person, org, place, url, text). The type catalog is
-curated, about 35 types, and any other type name is still accepted.
+Entry field → entry type override → section. Same type layers properties; a different type starts
+fresh. Disable drops only the entry's node. `promos/slides.html` slide 4 describes this rule.
+Property rows are `{property, source: field|template, value}`; field values are shaped by the
+property kind in `Helpers\SchemaTypes`.
 
 ### Output
 
-`View::EVENT_END_PAGE` on site requests calls `injectIntoView()` (`POS_HEAD`) unless a template already
-called `render()` or `disable()`. JSON is encoded with `JSON_HEX_TAG` so `</script>` in content can't
-close the tag. A template value that throws is logged as a warning and skipped, so a broken template
-never takes the page down. `EVENT_BEFORE_RENDER_GRAPH` lets other code edit the final graph.
+`Listeners\InjectJsonLd` handles `PageEnded` on site pages and pushes the script onto `HtmlStack`
+(`Position::Head`) unless a template called `render()` or `disable()`. Blade layouts need
+`@craftHead`. JSON uses `JSON_HEX_TAG`. A throwing template value is logged and skipped.
+`Events\GraphResolving` lets other code edit the graph. Per-entry template values are plain text
+unless the field's `allowTwig` is on, and then they render in Twig's sandbox.
 
-### Validator, GraphQL, MCP (5.1+)
+### Field editor
 
-`services\Validator` checks a document offline and returns a `models\ValidationResult`. Rich result
-rules live in `helpers\RichResults` (an approximation of Google's docs; say so wherever it's
-surfaced). It's reached from the utility (`utilities\ValidatorUtility` + `ValidatorController`), the
-field preview, `console\controllers\ValidateController` (`schemy/validate`, exits 65 on errors) and
-MCP. GraphQL is `gql\queries\SchemyQuery` (component `schemy.all:read`, scoped to the schema's
-sections and sites) and `gql\types\SchemyTypes`. MCP tools are `mcp\SchemyTools`; admin writes use
-`#[RequiresAdminChanges]`, entry reads check `craft\mcp\Authorization::allows()`. Anything that renders
-outside a site request goes through `Schema::getDocumentForElement()`, which switches the current site.
-
-`Schema::saveSettings()` is the only way settings get saved: it merges, and on a failed validation
-rolls the in-memory model back (Craft applies values before validating).
-
-The field's `allowTwig` setting defaults to **false**: per-entry template values are plain text unless
-an admin opts in, because authors who can edit entries are not necessarily trusted with Twig.
+`SchemaField::uiControl()` returns a `ContentBlock` control with a nested `Ui` (mode `Choice`, type
+`Combobox`, `Helpers\PropertyTable`, extra JSON `Textarea`). It posts `{mode, type, properties,
+extraJson}` under the field's path, which `normalizeValue()` reads directly. Proven in the harness.
 
 ## Testing
 
-No local PHP on this Mac. Lint and PHPStan run in Docker, and integration testing is on the
-plugin-testing site (`~/Sites/plugin-testing`, DDEV), where this repo is mounted at
-`/var/www/craft-schemy` and required as a path repository.
+Harness: `~/Sites/plugin-testing-craft6` (DDEV, shared with other sessions; read its README and
+`porting/COOKBOOK.md` harness etiquette). Run shared-state commands through `bin/harness-lock`.
+`bin/port-check craft-schemy` must stay green.
 
-```sh
-docker run --rm -v "$PWD":/app -w /app php:8.2-cli bash -c 'find src -name "*.php" -print0 | xargs -0 -n1 php -l'
-```
-
-PHPStan needs Craft's PHP extensions, so run it in DDEV:
-`ddev exec -d /var/www/craft-schemy composer install` then `ddev exec -d /var/www/craft-schemy vendor/bin/phpstan analyse --memory-limit=1G`
-(from `~/Sites/plugin-testing`). For a CP session without a password, `ddev craft users/impersonate admin`.
-
-Fixtures on plugin-testing: a `schemySchema` field on the newsArticle layout, the `schemyAbout`
-single (`/schemy-about`), and templates in `templates/schemy-test/`. News and pages sit behind
-another plugin's login wall for anonymous requests, so check those through the service from a console
-bootstrap. A bootstrap script that writes settings has to call
-`Craft::$app->getProjectConfig()->saveModifiedConfigData()`, or the writes never flush.
+- PHP 8.5 lint: `docker exec -w /var/www/ports/craft-schemy ddev-plugin-testing-craft6-web bash -c 'find src routes database -name "*.php" -print0 | xargs -0 -n1 php -l'`
+- Pint: the harness's `/var/www/html/vendor/bin/pint --preset laravel src routes database lang`
+- Pest + Larastan need the plugin's own `vendor/`, which Composer currently refuses to install
+  because of security advisories on the `twig/twig` version Craft 6 pins. Until that's resolved
+  upstream, check behaviour in the harness (tinker scripts under `storage/schemy-tmp/`, deleted after).
+- MCP: `(cat requests.jsonl; sleep 6) | docker exec -i -w /var/www/html ddev-plugin-testing-craft6-web php artisan craft:mcp:serve --user=admin`
+- Browser: `php artisan craft:users:impersonate admin` for a login link, and block `**/queue/run**`
+  (Playwright `context.route`) so opening the CP doesn't run other sessions' queued jobs.
 
 ## Marketing site and promos
 
@@ -99,8 +81,9 @@ see its README.
 
 ## Coding conventions
 
-- `Craft::t('schemy', '…')` for user-facing strings; `src/translations/en/schemy.php` lists them
-- Business logic in services; controllers stay thin
-- CP screens are admin-only; saves also need `allowAdminChanges`, and the screens render read-only
-  without it
-- Never mark plugin settings `required`, because it blocks fresh installs
+- `t('…', category: 'schemy')` for user-facing strings; `lang/en/schemy.php` lists overrides
+- Business logic in services; controllers are thin `readonly` classes with injected services
+- CP screens are admin-only (`RequireAdmin`); saves also need `RequireAdminChanges`, and screens
+  render read-only (`ControlMode::ReadOnly`) without `allowAdminChanges`
+- Text settings are nullable (Laravel turns blank input into null); never mark settings `required`
+- Every template-facing feature works in Twig and Blade

@@ -1,200 +1,204 @@
 <?php
 
-namespace justinholtweb\schemy;
+declare(strict_types=1);
 
-use Craft;
-use craft\base\Model;
-use craft\base\Plugin as BasePlugin;
-use craft\events\RegisterComponentTypesEvent;
-use craft\events\RegisterGqlQueriesEvent;
-use craft\events\RegisterGqlSchemaComponentsEvent;
-use craft\events\RegisterUrlRulesEvent;
-use craft\helpers\Html;
-use craft\helpers\UrlHelper;
-use craft\services\Fields;
-use craft\services\Gql;
-use craft\services\Mcp;
-use craft\services\Utilities;
-use craft\web\twig\variables\CraftVariable;
-use craft\web\UrlManager;
-use craft\web\View;
-use justinholtweb\schemy\fields\SchemaField;
-use justinholtweb\schemy\gql\queries\SchemyQuery;
-use justinholtweb\schemy\mcp\SchemyTools;
-use justinholtweb\schemy\models\Settings;
-use justinholtweb\schemy\services\Schema;
-use justinholtweb\schemy\services\Validator;
-use justinholtweb\schemy\utilities\ValidatorUtility;
-use justinholtweb\schemy\variables\SchemyVariable;
+namespace JustinHoltWeb\Schemy;
+
+use CraftCms\Cms\Cp\Data\NavItem;
+use CraftCms\Cms\Cp\Icons as CpIcons;
+use CraftCms\Cms\Cp\IconSets;
+use CraftCms\Cms\Element\Events\ElementMetadataResolving;
+use CraftCms\Cms\Gql\Events\GqlSchemaComponentsResolving;
+use CraftCms\Cms\Mcp\CapabilityRegistry;
+use CraftCms\Cms\Plugin\Plugin as BasePlugin;
+use CraftCms\Cms\Support\Html;
+use CraftCms\Cms\Twig\Events\PageEnded;
+use CraftCms\Cms\Twig\Variables\CraftVariable;
+use CraftCms\Cms\Ui\Controls\IconPicker;
+use CraftCms\Cms\Ui\Controls\Lightswitch;
+use CraftCms\Cms\Ui\Controls\Text;
+use CraftCms\Cms\Ui\Controls\Textarea;
+use CraftCms\Cms\Ui\Nodes\Field;
+use CraftCms\Cms\Ui\Nodes\Heading;
+use CraftCms\Cms\Ui\Ui;
+use CraftCms\Cms\Ui\UiContext;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
+use JustinHoltWeb\Schemy\Console\Commands\ValidateCommand;
+use JustinHoltWeb\Schemy\Fields\SchemaField;
+use JustinHoltWeb\Schemy\Gql\SchemyQuery;
+use JustinHoltWeb\Schemy\Listeners\AddEditorMetadata;
+use JustinHoltWeb\Schemy\Listeners\InjectJsonLd;
+use JustinHoltWeb\Schemy\Mcp\SchemyTools;
+use JustinHoltWeb\Schemy\Models\Settings;
+use JustinHoltWeb\Schemy\Services\Validator;
+use JustinHoltWeb\Schemy\Twig\SchemyVariable;
+use JustinHoltWeb\Schemy\Utilities\ValidatorUtility;
+use Override;
 use Throwable;
-use yii\base\Event;
+
+use function CraftCms\Cms\currentUser;
+use function CraftCms\Cms\t;
 
 /**
- * Schemy: schema.org JSON-LD for sections, entry types, and entries.
+ * Schemy: schema.org JSON-LD for sections, entry types and entries.
  *
- * @property-read Schema $schema
- * @property-read Validator $validator
  * @method Settings getSettings()
  */
 class Plugin extends BasePlugin
 {
+    /** Unchanged from Schemy 5: settings live in project config and there are no tables. */
     public string $schemaVersion = '1.0.0';
-    public bool $hasCpSettings = true;
+
+    /** Sites upgrade from the last Schemy 5 release, which has the same project config keys. */
+    public string $minVersionRequired = '5.1.0';
+
     public bool $hasCpSection = true;
 
-    public static function config(): array
+    public bool $hasCpSettings = true;
+
+    /** The validator utility's severity badges. */
+    protected array $styles = [
+        __DIR__.'/../resources/css/cp.css' => 'cp.css',
+    ];
+
+    protected array $fieldTypes = [
+        SchemaField::class,
+    ];
+
+    protected array $utilities = [
+        ValidatorUtility::class,
+    ];
+
+    protected array $gqlQueries = [
+        SchemyQuery::class,
+    ];
+
+    protected array $commands = [
+        ValidateCommand::class,
+    ];
+
+    protected array $events = [
+        PageEnded::class => InjectJsonLd::class,
+        ElementMetadataResolving::class => AddEditorMetadata::class,
+    ];
+
+    #[Override]
+    protected static function createSettings(): Settings
     {
-        return [
-            'components' => [
-                'schema' => Schema::class,
-                'validator' => Validator::class,
-            ],
-        ];
+        return new Settings;
     }
 
-    public function init(): void
+    public function register(): void
     {
-        parent::init();
+        parent::register();
 
-        Event::on(Fields::class, Fields::EVENT_REGISTER_FIELD_TYPES, function(RegisterComponentTypesEvent $event) {
-            $event->types[] = SchemaField::class;
-        });
-
-        Event::on(CraftVariable::class, CraftVariable::EVENT_INIT, function(Event $event) {
-            /** @var CraftVariable $variable */
-            $variable = $event->sender;
-            $variable->set('schemy', SchemyVariable::class);
-        });
-
-        Event::on(Utilities::class, Utilities::EVENT_REGISTER_UTILITIES, function(RegisterComponentTypesEvent $event) {
-            $event->types[] = ValidatorUtility::class;
-        });
-
-        $this->registerGql();
-        $this->registerMcp();
-
-        Craft::$app->onInit(function() {
-            $request = Craft::$app->getRequest();
-
-            if ($request->getIsCpRequest()) {
-                $this->registerCpRoutes();
-            } elseif ($request->getIsSiteRequest()) {
-                $this->registerAutoInject();
-            }
-        });
+        $this->app->singleton(Validator::class);
     }
 
-    public function getCpNavItem(): ?array
+    public function boot(CapabilityRegistry $capabilities): void
     {
-        if (!Craft::$app->getUser()->getIsAdmin()) {
-            return null;
-        }
+        // `craft.schemy` in Twig, `$craft->schemy` in Blade
+        CraftVariable::macro('schemy', fn () => app(SchemyVariable::class));
 
-        $item = $this->customiseNavItem(parent::getCpNavItem(), $this->getSettings());
-        $item['subnav'] = [
-            'sections' => ['label' => Craft::t('schemy', 'Sections'), 'url' => 'schemy/sections'],
-            'identity' => ['label' => Craft::t('schemy', 'Site Identity'), 'url' => 'schemy/identity'],
-            'settings' => ['label' => Craft::t('schemy', 'Settings'), 'url' => 'schemy/settings'],
-        ];
-
-        return $item;
-    }
-
-    /**
-     * The sidebar label and icon from settings: pasted SVG (sanitized every time it's drawn), then
-     * an icon name, then Schemy's own icon. Craft's Settings → Control Panel Navigation overrides
-     * still win, because Craft applies them afterwards. A bad value never breaks the nav.
-     *
-     * @param array<string, mixed> $item
-     * @return array<string, mixed>
-     */
-    public function customiseNavItem(array $item, Settings $settings): array
-    {
-        $label = trim((string)$settings->navLabel);
-
-        if ($label !== '') {
-            $item['label'] = $label;
-        }
-
-        $svg = trim((string)$settings->navIconSvg);
-        $icon = trim((string)$settings->navIcon);
-
-        try {
-            if ($svg !== '' && Settings::isSvgMarkup($svg)) {
-                $sanitized = Html::svg($svg, true, true, true);
-
-                if ($sanitized !== '') {
-                    $item['icon'] = $sanitized;
-                    return $item;
-                }
-            }
-
-            if ($icon !== '' && Settings::iconExists($icon)) {
-                $item['icon'] = $icon;
-            }
-        } catch (Throwable $e) {
-            Craft::warning("Couldn’t draw the custom nav icon: {$e->getMessage()}", __METHOD__);
-        }
-
-        return $item;
-    }
-
-    public function getSettingsResponse(): mixed
-    {
-        return Craft::$app->getResponse()->redirect(UrlHelper::cpUrl('schemy/settings'));
-    }
-
-    protected function createSettingsModel(): ?Model
-    {
-        return new Settings();
-    }
-
-    private function registerCpRoutes(): void
-    {
-        Event::on(UrlManager::class, UrlManager::EVENT_REGISTER_CP_URL_RULES, function(RegisterUrlRulesEvent $event) {
-            $event->rules['schemy'] = 'schemy/sections/index';
-            $event->rules['schemy/sections'] = 'schemy/sections/index';
-            $event->rules['schemy/sections/<sectionId:\d+>'] = 'schemy/sections/edit';
-            $event->rules['schemy/identity'] = 'schemy/settings/identity';
-            $event->rules['schemy/settings'] = 'schemy/settings/general';
-        });
-    }
-
-    private function registerGql(): void
-    {
-        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_SCHEMA_COMPONENTS, function(RegisterGqlSchemaComponentsEvent $event) {
-            $event->queries[Craft::t('schemy', 'Schemy')] = [
-                SchemyQuery::COMPONENT . ':read' => [
-                    'label' => Craft::t('schemy', 'Query JSON-LD with the `schemy` query'),
+        Event::listen(function (GqlSchemaComponentsResolving $event): void {
+            $event->queries[t('Schemy', category: 'schemy')] = [
+                SchemyQuery::COMPONENT.':read' => [
+                    'label' => t('Query JSON-LD with the `schemy` query', category: 'schemy'),
+                    // Results are limited to entries the schema's user can view
+                    'authenticated' => true,
                 ],
             ];
         });
 
-        Event::on(Gql::class, Gql::EVENT_REGISTER_GQL_QUERIES, function(RegisterGqlQueriesEvent $event) {
-            $event->queries = array_merge($event->queries, SchemyQuery::getQueries());
-        });
+        $capabilities->register(SchemyTools::class);
     }
 
-    private function registerMcp(): void
+    #[Override]
+    public function getCpNavItem(): NavItem|array|null
     {
-        Event::on(Mcp::class, Mcp::EVENT_REGISTER_CAPABILITY_TYPES, function(RegisterComponentTypesEvent $event) {
-            $event->types[] = SchemyTools::class;
-        });
-    }
-
-    private function registerAutoInject(): void
-    {
-        if (!$this->getSettings()->autoInject) {
-            return;
+        if (! currentUser()?->isAdmin()) {
+            return null;
         }
 
-        Event::on(View::class, View::EVENT_END_PAGE, function(Event $event) {
-            /** @var View $view */
-            $view = $event->sender;
+        $item = parent::getCpNavItem();
 
-            if ($view->getTemplateMode() === View::TEMPLATE_MODE_SITE) {
-                $this->schema->injectIntoView($view);
+        if (! $item instanceof NavItem) {
+            return $item;
+        }
+
+        $item->subnav([
+            new NavItem()->label(t('Sections', category: 'schemy'))->href('schemy/sections'),
+            new NavItem()->label(t('Site Identity', category: 'schemy'))->href('schemy/identity'),
+            new NavItem()->label(t('Validator', category: 'schemy'))->href('utilities/'.ValidatorUtility::id()),
+            new NavItem()->label(t('Settings', category: 'schemy'))->href('settings/plugins/schemy'),
+        ]);
+
+        return $this->customiseNavItem($item, $this->getSettings());
+    }
+
+    /**
+     * The sidebar label and icon from settings: label, then pasted SVG (sanitized every time it's
+     * drawn), then an icon name. Craft's own Settings → Control Panel Navigation overrides win,
+     * because Craft applies them afterwards. A bad value never breaks the nav.
+     */
+    public function customiseNavItem(NavItem $item, Settings $settings): NavItem
+    {
+        $label = trim((string) $settings->navLabel);
+
+        if ($label !== '') {
+            $item->label($label);
+        }
+
+        $svg = trim((string) $settings->navIconSvg);
+        $icon = trim((string) $settings->navIcon);
+
+        try {
+            if ($svg !== '' && Settings::isSvgMarkup($svg)) {
+                $sanitized = Html::svg($svg, sanitize: true, namespace: true);
+
+                if ($sanitized !== '') {
+                    return $item->iconSvg($sanitized)->icon(null);
+                }
             }
-        });
+
+            if ($icon !== '' && IconSets::parse($icon) !== null) {
+                // A custom set's icon (`set:name`) is drawn server-side
+                return $item->iconSvg(CpIcons::svg($icon))->icon(null);
+            }
+
+            if ($icon !== '' && Settings::iconExists($icon)) {
+                return $item->icon($icon)->iconSvg(null);
+            }
+        } catch (Throwable $e) {
+            Log::warning('Schemy couldn’t draw the custom nav icon: '.$e->getMessage());
+        }
+
+        return $item;
+    }
+
+    #[Override]
+    public function settingsUi(UiContext $context = new UiContext): ?Ui
+    {
+        return Ui::make([
+            Heading::make('schemy-output', t('Output', category: 'schemy')),
+            Field::make(t('Output automatically', category: 'schemy'), Lightswitch::make('autoInject'))
+                ->instructions(t('Add JSON-LD to the `<head>` of every front-end page. Turn this off to place `{{ craft.schemy.render() }}` in your templates yourself. Blade layouts need `@craftHead` for automatic output.', category: 'schemy')),
+            Field::make(t('Include site identity', category: 'schemy'), Lightswitch::make('includeIdentity'))
+                ->instructions(t('Output the Organization/Person node configured under Site Identity.', category: 'schemy')),
+            Field::make(t('Include WebSite', category: 'schemy'), Lightswitch::make('includeWebSite'))
+                ->instructions(t('Output a WebSite node for the current site.', category: 'schemy')),
+            Field::make(t('Include breadcrumbs', category: 'schemy'), Lightswitch::make('includeBreadcrumbs'))
+                ->instructions(t('Output a BreadcrumbList built from the site home page and, in structure sections, the entry’s ancestors.', category: 'schemy')),
+
+            Heading::make('schemy-nav', t('Control panel', category: 'schemy'))
+                ->description(t('How Schemy appears in the sidebar. An override set in Settings → Control Panel Navigation takes precedence over these.', category: 'schemy')),
+            Field::make(t('Sidebar label', category: 'schemy'), Text::make('navLabel')->placeholder($this->name))
+                ->instructions(t('Leave empty for “{name}”.', ['name' => $this->name], category: 'schemy')),
+            Field::make(t('Sidebar icon', category: 'schemy'), IconPicker::make('navIcon')->sets('*'))
+                ->instructions(t('Leave empty for Schemy’s own icon.', category: 'schemy')),
+            Field::make(t('Custom SVG icon', category: 'schemy'), Textarea::make('navIconSvg')->rows(4)->monospace())
+                ->instructions(t('Optional. Paste one `<svg>` element to use instead of the icon above. It’s sanitized every time it’s drawn; a single-color icon using `currentColor` matches the rest of the sidebar.', category: 'schemy')),
+        ]);
     }
 }

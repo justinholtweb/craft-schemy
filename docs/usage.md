@@ -22,11 +22,11 @@ Add the **Schema (Schemy)** field to any field layout. It has three modes:
 The collapsible *Additional JSON-LD* box takes a raw JSON object or array of objects, added to
 the page graph as-is. Invalid JSON fails validation when the entry is saved.
 
-### Preview
+### Checking the output
 
-**Preview and validate** shows the exact graph the front end will output for the last saved or
-autosaved version of the entry, with any issues the
-[validator](https://justinholt.com/plugins/craft-schemy/docs/validator) finds listed below it.
+The entry sidebar's **Schema** row shows the main type Schemy outputs for the saved entry and a
+summary of what the [validator](https://justinholt.com/plugins/craft-schemy/docs/validator) finds,
+linking to the full results.
 
 ### Twig in entry values
 
@@ -74,12 +74,10 @@ Nodes reference each other by `@id`:
 ## Changing the graph from PHP
 
 ```php
-use justinholtweb\schemy\events\GraphEvent;
-use justinholtweb\schemy\services\Schema;
-use yii\base\Event;
+use Illuminate\Support\Facades\Event;
+use JustinHoltWeb\Schemy\Events\GraphResolving;
 
-Event::on(Schema::class, Schema::EVENT_BEFORE_RENDER_GRAPH, function (GraphEvent $event) {
-    // $event->element is the page's element, or null
+Event::listen(function (GraphResolving $event) {
     $event->graph[] = ['@type' => 'SiteNavigationElement', 'name' => 'Main'];
 });
 ```

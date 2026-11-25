@@ -1,25 +1,19 @@
 # Schemy
 
-Schema.org JSON-LD for Craft CMS 5. You set schema on sections (including singles), entry types, and individual entries, and Schemy outputs it on the front end. It doesn't manage meta tags, sitemaps, redirects, or anything else SEO-related.
+Schema.org JSON-LD for Craft CMS 6. You set schema on sections (including singles), entry types, and individual entries, and Schemy outputs it on the front end. It doesn't manage meta tags, sitemaps, redirects, or anything else SEO-related.
+
+This is the Craft 6 line. Schemy 5.x supports Craft 5; upgrading from it is covered in [UPGRADING.md](https://github.com/justinholtweb/craft-schemy/blob/6.0.0/UPGRADING.md).
 
 ## Requirements
 
-- Craft CMS 5.12.1+ (Schemy 5.0.0 supports any Craft 5)
-- PHP 8.2+
+- Craft CMS 6.0.0-beta.1 or later
+- PHP 8.5+
 
 ## Installation
 
 ```bash
-composer require justinholtweb/craft-schemy
-php craft plugin/install schemy
-```
-
-To install from a local checkout, add a path repository to your project’s `composer.json`:
-
-```json
-"repositories": [
-  { "type": "path", "url": "../craft-schemy" }
-]
+composer require justinholtweb/craft-schemy:^6.0.0-beta.1
+php artisan craft:plugin:install schemy
 ```
 
 ## How it works
@@ -30,7 +24,7 @@ Every front-end page gets a single JSON-LD `@graph` containing:
 2. **WebSite**: built from the current site.
 3. **The page’s main entity**: whatever schema applies to the matched entry.
 4. **BreadcrumbList**: the home page, the entry’s ancestors (in structure sections), and the entry itself.
-5. Anything you add from templates, from the per-entry “Additional JSON-LD” box, or from the `beforeRenderGraph` event.
+5. Anything you add from templates, from the per-entry “Additional JSON-LD” box, or from a `GraphResolving` listener.
 
 Nodes are linked by `@id`. An Article’s `publisher`, for example, points at the identity node.
 
@@ -41,7 +35,7 @@ From most specific to least specific:
 | Level | Where | Notes |
 | --- | --- | --- |
 | Entry | The **Schema (Schemy)** field, set to *Customize* or *Disable* | Same type as inherited: properties are layered on top. Different type: starts fresh. |
-| Entry type | **Schemy → Sections → (section) → Entry type overrides** | Scoped to that section, since entry types are shared across sections in Craft 5. |
+| Entry type | **Schemy → Sections → (section) → Entry type overrides** | Scoped to that section, since entry types are shared across sections. |
 | Section | **Schemy → Sections → (section)** | Works the same for singles, channels, and structures. |
 
 ### Property mappings
@@ -77,23 +71,29 @@ Add the **Schema (Schemy)** field to any field layout. It has three modes:
 - **Customize**: pick a type and add or override properties.
 - **Disable**: output no main entity for this entry. Site-wide nodes still appear.
 
-It also has an *Additional JSON-LD* box for raw nodes and a *Preview JSON-LD* button, which shows the last saved or autosaved version.
+It also has an *Additional JSON-LD* box for raw nodes. The entry's sidebar shows a **Schema** row with the main type and a validation summary for the saved entry, linking to the validator.
 
-By default, template values entered on entries are output as plain text and never run as Twig, so authors can’t run Twig. Turn on **Parse Twig in values** in the field settings if you trust everyone who edits those entries.
+By default, template values entered on entries are output as plain text and never run as Twig, so authors can’t run Twig. Turn on **Parse Twig in values** in the field settings to render them in Twig’s sandbox, if you trust everyone who edits those entries.
 
-The field works on any element type with a field layout (categories, users, Commerce products, …). These elements get schema only through the field, since section defaults apply only to entries.
+The field works on any element type with a field layout (users, addresses, Commerce products, …). These elements get schema only through the field, since section defaults apply only to entries.
 
 ## Templates
 
-With **Output automatically** on (the default), Schemy adds the script tag to `<head>` on every front-end page. To control placement yourself, turn it off and add:
+With **Output automatically** on (the default), Schemy adds the script tag to `<head>` on every front-end page. Twig layouts get the head placeholder automatically; **Blade layouts need `@craftHead`** in their `<head>`.
+
+To control placement yourself, turn it off and output it where you want:
 
 ```twig
 {{ craft.schemy.render(entry ?? null) }}
 ```
 
+```blade
+{!! $craft->schemy()->render($entry ?? null) !!}
+```
+
 Calling `render()` also stops automatic output for that request, so you can mix the two.
 
-Other helpers:
+Other helpers, the same in both engines (`craft.schemy.x()` in Twig, `$craft->schemy()->x()` in Blade):
 
 ```twig
 {# Add a node to this page's graph #}
@@ -113,10 +113,10 @@ Other helpers:
 
 Checks JSON-LD for broken structure, likely typos, bad dates and URLs, and the properties Google’s rich results need, without any outbound requests.
 
-- **Utilities → Schema Validator**: validate an entry or pasted JSON-LD
-- The Schema field’s **Preview and validate** button
-- `php craft schemy/validate --section=news` (exits non-zero on errors, for CI)
-- `Plugin::getInstance()->validator->validateElement($entry)`
+- **Utilities → Schema Validator** (also **Schemy → Validator**): validate an entry by ID, URI or URL, or paste JSON-LD
+- The **Schema** row in the entry sidebar
+- `php artisan schemy:validate --section=news` (exits 1 on errors, for CI; `php craft schemy/validate` still works)
+- `app(\JustinHoltWeb\Schemy\Services\Validator::class)->validateElement($entry)`
 
 ## GraphQL
 
@@ -126,17 +126,17 @@ Enable the Schemy component in a GraphQL schema, then:
 { schemy(uri: "news/harbour-reopens") { jsonLd script } }
 ```
 
-Leave out `id`/`uri` for the site-wide nodes. The Schema field also returns `mode`, `type`, `properties`, `extraJson` and the rendered `jsonLd`, and accepts a `SchemyFieldInput` in mutations.
+Leave out `id`/`uri` for the site-wide nodes. Only entries in the schema’s sections and sites are found, and on an authenticated schema only ones its user can view. The Schema field also returns `mode`, `type`, `properties`, `extraJson` and the rendered `jsonLd`, and accepts a `SchemyFieldInput` in mutations.
 
 ## MCP
 
-On Craft 5.12.1+, Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, and, for admins, `schemy_settings_get`, `schemy_sections_list`, `schemy_section_schema_set`, `schemy_identity_set` and `schemy_settings_set` (writes need `allowAdminChanges`). The Schema field describes its value to Craft’s own entry tools, so assistants can set per-entry schema too.
+Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, and, for admins, `schemy_settings_get`, `schemy_sections_list`, `schemy_section_schema_set`, `schemy_identity_set` and `schemy_settings_set` (writes need `allowAdminChanges` and the token’s full-access scope). The names and input schemas match Schemy 5.1’s. The Schema field describes its value to Craft’s own element tools, so assistants can set per-entry schema too.
 
 ## Settings and environments
 
-All Schemy configuration (section mappings, identity, and toggles) lives in plugin settings, so it’s stored in **project config** and deploys like the rest of your schema. When `allowAdminChanges` is off, the Schemy pages are read-only.
+All Schemy configuration (section mappings, identity, switches, sidebar label and icon) lives in plugin settings, so it’s stored in **project config** and deploys like the rest of your schema. When `allowAdminChanges` is off, the Schemy screens are read-only. General settings are at **Settings → Plugins → Schemy**.
 
-You can also override any setting in `config/schemy.php`:
+You can also override any setting in `config/craft/schemy.php`:
 
 ```php
 <?php
@@ -152,23 +152,33 @@ return [
 
 ## Events
 
-Modify the graph before it’s encoded:
+Change the graph before it’s encoded:
 
 ```php
-use justinholtweb\schemy\events\GraphEvent;
-use justinholtweb\schemy\services\Schema;
-use yii\base\Event;
+use Illuminate\Support\Facades\Event;
+use JustinHoltWeb\Schemy\Events\GraphResolving;
 
-Event::on(Schema::class, Schema::EVENT_BEFORE_RENDER_GRAPH, function (GraphEvent $event) {
+Event::listen(function (GraphResolving $event) {
     $event->graph[] = ['@type' => 'SiteNavigationElement', 'name' => 'Main'];
 });
 ```
+
+## Troubleshooting
+
+- **Nothing in `<head>` on a Blade page.** Blade layouts must call `@craftHead`, `@craftBeginBody` and `@craftEndBody`; Twig layouts get them automatically.
+- **`Undefined property … CraftVariable::$schemy` in Blade.** It’s a method there: `$craft->schemy()`.
+- **The main entity is missing.** Check **Schemy → Sections**: the section (or the entry type override) needs a type. The entry sidebar’s **Schema** row says what Schemy outputs for the saved entry.
+- **A Field-source property is empty.** The value must be a field handle on the entry’s layout, or one of `title`, `url`, `slug`, `postDate`, `dateCreated`, `dateUpdated`, `expiryDate`, `author`. Plain text belongs in the Template source.
+- **The screens are read-only.** `allowAdminChanges` is off in this environment; change settings in development and deploy project config.
+- **The `schemy` GraphQL query is missing.** Enable the Schemy component on the schema, and the sections and sites you want it to read.
 
 ## Development
 
 ```bash
 composer install
-vendor/bin/phpstan analyse
+composer test        # Pest, on in-memory SQLite
+composer phpstan     # Larastan
+composer check-cs    # Pint
 ```
 
 ## License

@@ -54,7 +54,7 @@ instead of a string:
 
 ## Entry type overrides
 
-On a section's page, each of its entry types can switch on its own schema. In Craft 5 an entry
+On a section's page, each of its entry types can switch on its own schema. In Craft an entry
 type can belong to several sections, so the override is scoped to this section only. Your
 `article` type can be a `NewsArticle` in News and a `BlogPosting` in Blog.
 
@@ -69,7 +69,7 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 
 ## Output switches
 
-**Schemy → Settings** has four switches:
+**Settings → Plugins → Schemy** has four switches:
 
 | Setting | Default | |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ All of the above is plugin settings, so it is stored in project config and deplo
 schema. With `allowAdminChanges` off, the Schemy pages are read-only. Make changes locally and
 deploy them.
 
-Any setting can be overridden in `config/schemy.php`:
+Any setting can be overridden in `config/craft/schemy.php`:
 
 ```php
 <?php

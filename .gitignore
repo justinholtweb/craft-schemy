@@ -1,5 +1,8 @@
 /vendor
 /composer.lock
+/.phpunit.cache
+/.pest
+.phpstan-cache
 .DS_Store
 .idea
 /promos/fonts.css

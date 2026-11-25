@@ -27,22 +27,24 @@ still the final word.
 
 ## In the control panel
 
-**Utilities → Schema Validator** validates what Schemy outputs for an entry, or any JSON-LD you
-paste in, including a whole `<script type="application/ld+json">` tag copied from page source.
-Access follows Craft's utility permissions.
+**Utilities → Schema Validator** (also **Schemy → Validator**) validates what Schemy outputs for an
+entry, given its ID, URI or full URL, or any JSON-LD you paste in, including a whole
+`<script type="application/ld+json">` tag copied from page source. Access follows Craft's utility
+permissions.
 
-The Schema field's **Preview and validate** button shows the same results under the preview.
+The **Schema** row in an entry's sidebar summarizes the results for the saved entry and links to them.
 
 ## From the command line
 
 ```sh
-php craft schemy/validate --entry=42
-php craft schemy/validate --section=news --site=fr --limit=500
-php craft schemy/validate --file=build/schema.json
+php artisan schemy:validate --entry=42
+php artisan schemy:validate --entry=news/harbour-reopens
+php artisan schemy:validate --section=news --site=fr --limit=500
+php artisan schemy:validate --file=build/schema.json
 ```
 
 With `--section`, only entries with errors list their issues; add `--all` to see warnings and
-notices too. The command exits with a non-zero code when it finds an error, so it can stop a
+notices too. The command exits with code 1 when it finds an error (2 on bad usage), so it can stop a
 deploy or fail a CI job.
 
 ## From MCP and PHP
@@ -51,9 +53,9 @@ AI assistants connected to Craft's MCP server can call `schemy_jsonld_validate` 
 `schemy_entry_jsonld_get`. See [MCP](https://justinholt.com/plugins/craft-schemy/docs/mcp).
 
 ```php
-use justinholtweb\schemy\Plugin;
+use JustinHoltWeb\Schemy\Services\Validator;
 
-$result = Plugin::getInstance()->validator->validateElement($entry);
+$result = app(Validator::class)->validateElement($entry);
 $result->hasErrors();
 $result->toArray(); // ['valid' => bool, 'errors' => int, 'warnings' => int, 'notices' => int, 'issues' => [...]]
 ```
