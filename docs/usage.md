@@ -24,8 +24,9 @@ the page graph as-is. Invalid JSON fails validation when the entry is saved.
 
 ### Preview
 
-**Preview JSON-LD** shows the exact graph the front end will output for the last saved or
-autosaved version of the entry.
+**Preview and validate** shows the exact graph the front end will output for the last saved or
+autosaved version of the entry, with any issues the
+[validator](https://justinholt.com/plugins/craft-schemy/docs/validator) finds listed below it.
 
 ### Twig in entry values
 

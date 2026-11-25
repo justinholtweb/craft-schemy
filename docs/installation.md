@@ -7,7 +7,7 @@ summary: Requirements, install, and the first schema on the page.
 
 ## Requirements
 
-- Craft CMS 5.0 or later
+- Craft CMS 5.12.1 or later (Schemy 5.0.0 supports any Craft 5)
 - PHP 8.2 or later
 
 ## Install

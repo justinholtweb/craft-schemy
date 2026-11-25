@@ -15,7 +15,9 @@ use craft\fields\data\OptionData;
 use craft\helpers\ArrayHelper;
 use craft\helpers\Html;
 use craft\helpers\UrlHelper;
+use craft\models\EntryType;
 use craft\models\FieldLayout;
+use craft\models\Section;
 use craft\models\Site;
 use craft\web\View;
 use DateTimeInterface;
@@ -119,9 +121,9 @@ class Schema extends Component
         }
 
         // JSON_HEX_TAG keeps "</script>" in content from closing the tag early
-        $json = json_encode($document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_PRETTY_PRINT);
+        $json = self::encode($document, true);
 
-        return $json === false ? '' : Html::tag('script', $json, ['type' => 'application/ld+json']);
+        return $json === '' ? '' : Html::tag('script', $json, ['type' => 'application/ld+json']);
     }
 
     /**
@@ -138,6 +140,135 @@ class Schema extends Component
         return [
             '@context' => 'https://schema.org',
             '@graph' => $graph,
+        ];
+    }
+
+    /**
+     * Returns the document for an element as its own site would render it, switching the current
+     * site while object templates run. Use this outside of a front-end request (control panel,
+     * GraphQL, MCP, console). With no element, returns the site-wide nodes for `$site`.
+     */
+    public function getDocumentForElement(?ElementInterface $element, ?Site $site = null): ?array
+    {
+        $sites = Craft::$app->getSites();
+        $originalSite = $sites->getCurrentSite();
+        $sites->setCurrentSite($element?->getSite() ?? $site ?? $originalSite);
+
+        try {
+            return $this->getDocument($element);
+        } finally {
+            $sites->setCurrentSite($originalSite);
+        }
+    }
+
+    /**
+     * Encodes a document as JSON. `$forHtml` escapes `<` and `>` so the result is safe inside a `<script>` tag.
+     */
+    public static function encode(array $document, bool $forHtml = false, bool $pretty = true): string
+    {
+        $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+
+        if ($forHtml) {
+            $flags |= JSON_HEX_TAG;
+        }
+
+        if ($pretty) {
+            $flags |= JSON_PRETTY_PRINT;
+        }
+
+        return json_encode($document, $flags) ?: '';
+    }
+
+    // Saving config
+    // -------------------------------------------------------------------------
+
+    /**
+     * Saves plugin settings. `savePluginSettings()` only writes the keys it's given,
+     * so the changes are merged into the full current settings first.
+     */
+    public function saveSettings(array $changes): bool
+    {
+        $plugin = Plugin::getInstance();
+        $model = $plugin->getSettings();
+        $previous = $model->toArray();
+
+        if (Craft::$app->getPlugins()->savePluginSettings($plugin, array_merge($previous, $changes))) {
+            return true;
+        }
+
+        // savePluginSettings() applies the values before validating them. Put the saved values
+        // back so later reads and saves in this request don't pick up the rejected ones; the
+        // validation errors stay on the model for display.
+        $model->setAttributes($previous, false);
+
+        return false;
+    }
+
+    /**
+     * Saves a section's schema config, replacing what was there.
+     *
+     * @param array{type?: string, properties?: array, entryTypes?: array<string, array>} $config
+     * Entry type configs are keyed by entry type UID. Ones without `override` are dropped, as are UIDs
+     * that don't belong to the section.
+     */
+    public function saveSectionConfig(Section $section, array $config): bool
+    {
+        $validUids = array_map(fn(EntryType $entryType) => $entryType->uid, $section->getEntryTypes());
+        $entryTypes = [];
+
+        foreach ($config['entryTypes'] ?? [] as $uid => $entryTypeConfig) {
+            if (!in_array($uid, $validUids, true) || !is_array($entryTypeConfig) || empty($entryTypeConfig['override'])) {
+                continue;
+            }
+
+            $entryTypes[$uid] = [
+                'override' => true,
+                'type' => SchemaTypes::cleanName($entryTypeConfig['type'] ?? ''),
+                'properties' => PropertyRows::normalize($entryTypeConfig['properties'] ?? []),
+            ];
+        }
+
+        $clean = [
+            'type' => SchemaTypes::cleanName($config['type'] ?? ''),
+            'properties' => PropertyRows::normalize($config['properties'] ?? []),
+            'entryTypes' => $entryTypes,
+        ];
+
+        $sections = Plugin::getInstance()->getSettings()->sections;
+
+        if ($clean['type'] === '' && empty($entryTypes)) {
+            unset($sections[$section->uid]);
+        } else {
+            $sections[$section->uid] = $clean;
+        }
+
+        return $this->saveSettings(['sections' => $sections]);
+    }
+
+    /**
+     * Returns a section's stored config in a predictable shape.
+     *
+     * @return array{type: string, properties: array, entryTypes: array<string, array{override: bool, type: string, properties: array}>}
+     */
+    public function getSectionConfig(Section $section): array
+    {
+        $config = Plugin::getInstance()->getSettings()->sections[$section->uid] ?? [];
+        $entryTypes = [];
+
+        foreach ($config['entryTypes'] ?? [] as $uid => $entryTypeConfig) {
+            if (is_array($entryTypeConfig) && !empty($entryTypeConfig['override'])) {
+                $entryTypes[$uid] = [
+                    'override' => true,
+                    'type' => (string)($entryTypeConfig['type'] ?? ''),
+                    'properties' => PropertyRows::normalize($entryTypeConfig['properties'] ?? []),
+                ];
+            }
+        }
+
+        return [
+            'type' => (string)($config['type'] ?? ''),
+            'properties' => PropertyRows::normalize($config['properties'] ?? []),
+            'entryTypes' => $entryTypes,
         ];
     }
 

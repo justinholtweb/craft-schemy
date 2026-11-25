@@ -8,7 +8,7 @@ as `justinholtweb/craft-schemy`. **Free, under the Craft License, with no editio
 
 ## Tech Stack
 
-- **PHP 8.2+**, **Craft CMS 5.0+**, Yii2, Twig
+- **PHP 8.2+**, **Craft CMS 5.12.1+** (MCP and `InputSchemaFieldInterface`), Yii2, Twig
 - No build step, no database tables, no outbound HTTP. One classic IIFE in
   `src/web/assets/cp/dist/schemy.js`.
 
@@ -29,9 +29,9 @@ as `justinholtweb/craft-schemy`. **Free, under the Craft License, with no editio
 - **Per entry**: the `SchemaField` value (`models\SchemaOverride`, a JSON column) with mode
   `inherit | override | disable`, its own type and properties, and `extraJson`.
 
-`savePluginSettings()` writes only the keys it's given, so every controller save merges into
-`getSettings()->toArray()` and passes the whole array. Pass a partial array and the other settings
-are lost.
+`savePluginSettings()` writes only the keys it's given, so every save goes through
+`Schema::saveSettings()`, which merges into `getSettings()->toArray()`. Pass a partial array to
+`savePluginSettings()` directly and the other settings are lost.
 
 ### Resolution and merge (`services\Schema`)
 
@@ -52,6 +52,20 @@ called `render()` or `disable()`. JSON is encoded with `JSON_HEX_TAG` so `</scri
 close the tag. A template value that throws is logged as a warning and skipped, so a broken template
 never takes the page down. `EVENT_BEFORE_RENDER_GRAPH` lets other code edit the final graph.
 
+### Validator, GraphQL, MCP (5.1+)
+
+`services\Validator` checks a document offline and returns a `models\ValidationResult`. Rich result
+rules live in `helpers\RichResults` (an approximation of Google's docs; say so wherever it's
+surfaced). It's reached from the utility (`utilities\ValidatorUtility` + `ValidatorController`), the
+field preview, `console\controllers\ValidateController` (`schemy/validate`, exits 65 on errors) and
+MCP. GraphQL is `gql\queries\SchemyQuery` (component `schemy.all:read`, scoped to the schema's
+sections and sites) and `gql\types\SchemyTypes`. MCP tools are `mcp\SchemyTools`; admin writes use
+`#[RequiresAdminChanges]`, entry reads check `craft\mcp\Authorization::allows()`. Anything that renders
+outside a site request goes through `Schema::getDocumentForElement()`, which switches the current site.
+
+`Schema::saveSettings()` is the only way settings get saved: it merges, and on a failed validation
+rolls the in-memory model back (Craft applies values before validating).
+
 The field's `allowTwig` setting defaults to **false**: per-entry template values are plain text unless
 an admin opts in, because authors who can edit entries are not necessarily trusted with Twig.
 
@@ -64,6 +78,10 @@ plugin-testing site (`~/Sites/plugin-testing`, DDEV), where this repo is mounted
 ```sh
 docker run --rm -v "$PWD":/app -w /app php:8.2-cli bash -c 'find src -name "*.php" -print0 | xargs -0 -n1 php -l'
 ```
+
+PHPStan needs Craft's PHP extensions, so run it in DDEV:
+`ddev exec -d /var/www/craft-schemy composer install` then `ddev exec -d /var/www/craft-schemy vendor/bin/phpstan analyse --memory-limit=1G`
+(from `~/Sites/plugin-testing`). For a CP session without a password, `ddev craft users/impersonate admin`.
 
 Fixtures on plugin-testing: a `schemySchema` field on the newsArticle layout, the `schemyAbout`
 single (`/schemy-about`), and templates in `templates/schemy-test/`. News and pages sit behind

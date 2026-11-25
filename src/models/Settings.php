@@ -13,6 +13,12 @@ use craft\base\Model;
  */
 class Settings extends Model
 {
+    /** The control panel sidebar label. Blank uses the plugin name. */
+    public string $pluginName = '';
+
+    /** A Craft system icon name for the sidebar (e.g. `sitemap`). Blank uses Schemy's icon. */
+    public string $navIcon = '';
+
     /** Output JSON-LD into `<head>` automatically on front-end pages. */
     public bool $autoInject = true;
 
@@ -54,6 +60,8 @@ class Settings extends Model
         return [
             [['identityType'], 'string'],
             [['identityType'], 'match', 'pattern' => '/^[A-Za-z][A-Za-z0-9]*$/'],
+            [['pluginName'], 'string', 'max' => 100],
+            [['navIcon'], 'match', 'pattern' => '/^[a-z0-9][a-z0-9-]*$/'],
         ];
     }
 }

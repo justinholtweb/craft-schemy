@@ -105,42 +105,19 @@ class SectionsController extends Controller
 
         $entryTypes = [];
         foreach ($section->getEntryTypes() as $entryType) {
-            $posted = $request->getBodyParam("entryTypes.{$entryType->uid}", []);
-            if (empty($posted['override'])) {
-                continue;
-            }
-            $entryTypes[$entryType->uid] = [
-                'override' => true,
-                'type' => $this->cleanType($posted['type'] ?? ''),
-                'properties' => PropertyRows::normalize($posted['properties'] ?? []),
-            ];
+            $entryTypes[$entryType->uid] = $request->getBodyParam("entryTypes.{$entryType->uid}", []);
         }
 
-        $config = [
-            'type' => $this->cleanType($request->getBodyParam('type', '')),
-            'properties' => PropertyRows::normalize($request->getBodyParam('properties', [])),
+        $saved = Plugin::getInstance()->schema->saveSectionConfig($section, [
+            'type' => $request->getBodyParam('type', ''),
+            'properties' => $request->getBodyParam('properties', []),
             'entryTypes' => $entryTypes,
-        ];
+        ]);
 
-        $plugin = Plugin::getInstance();
-        $settings = $plugin->getSettings()->toArray();
-
-        if ($config['type'] === '' && empty($entryTypes)) {
-            unset($settings['sections'][$section->uid]);
-        } else {
-            $settings['sections'][$section->uid] = $config;
-        }
-
-        if (!Craft::$app->getPlugins()->savePluginSettings($plugin, $settings)) {
+        if (!$saved) {
             return $this->asFailure(Craft::t('schemy', 'Couldn’t save schema settings.'));
         }
 
         return $this->asSuccess(Craft::t('schemy', 'Schema saved for {section}.', ['section' => $section->name]));
-    }
-
-    private function cleanType(mixed $type): string
-    {
-        $type = trim((string)$type);
-        return preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $type) ? $type : '';
     }
 }

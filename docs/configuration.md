@@ -78,6 +78,13 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 | Include WebSite | On | A WebSite node for the current site |
 | Include breadcrumbs | On | A BreadcrumbList from the home page and, in structures, the entry's ancestors |
 
+## Sidebar label and icon
+
+Under **Control Panel** on the same page, **Sidebar label** renames Schemy in the control panel
+sidebar (say, to "Structured Data") and **Sidebar icon** picks any control panel icon. Leave
+either blank for the default. Both are stored in project config with the other settings, as
+`pluginName` and `navIcon`.
+
 ## Project config
 
 All of the above is plugin settings, so it is stored in project config and deploys with your

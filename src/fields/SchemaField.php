@@ -5,8 +5,12 @@ namespace justinholtweb\schemy\fields;
 use Craft;
 use craft\base\ElementInterface;
 use craft\base\Field;
+use craft\base\InputSchemaFieldInterface;
 use craft\helpers\Cp;
 use craft\helpers\Json;
+use GraphQL\Type\Definition\Type;
+use justinholtweb\schemy\gql\types\SchemyTypes;
+use justinholtweb\schemy\helpers\PropertyRows;
 use justinholtweb\schemy\helpers\SchemaTypes;
 use justinholtweb\schemy\models\SchemaOverride;
 use justinholtweb\schemy\Plugin;
@@ -16,7 +20,7 @@ use yii\db\Schema as DbSchema;
 /**
  * Lets authors inherit, override, or disable schema on an individual element.
  */
-class SchemaField extends Field
+class SchemaField extends Field implements InputSchemaFieldInterface
 {
     /**
      * Whether template values entered on elements are parsed as Twig.
@@ -108,6 +112,71 @@ class SchemaField extends Field
                 Craft::t('schemy', 'Additional JSON-LD must be a valid JSON object or array of objects.'),
             );
         }
+    }
+
+    public function getContentGqlType(): Type|array
+    {
+        return [
+            'name' => $this->handle,
+            'type' => SchemyTypes::fieldData(),
+            'description' => $this->instructions,
+            'resolve' => function(ElementInterface $source) {
+                $value = $source->getFieldValue($this->handle);
+                return [
+                    'element' => $source,
+                    'value' => $value instanceof SchemaOverride ? $value : new SchemaOverride(),
+                ];
+            },
+        ];
+    }
+
+    public function getContentGqlMutationArgumentType(): Type|array
+    {
+        return [
+            'name' => $this->handle,
+            'type' => SchemyTypes::fieldInput(),
+            'description' => $this->instructions,
+        ];
+    }
+
+    /**
+     * Describes the value for Craft's MCP entry tools (Craft 5.12+).
+     */
+    public function getInputSchema(): array
+    {
+        return [
+            'type' => ['object', 'null'],
+            'description' => 'Schemy schema settings for this entry.',
+            'properties' => [
+                'mode' => [
+                    'type' => 'string',
+                    'enum' => [SchemaOverride::MODE_INHERIT, SchemaOverride::MODE_OVERRIDE, SchemaOverride::MODE_DISABLE],
+                    'description' => '`inherit` uses the section or entry type schema, `override` uses `type` and `properties` below, `disable` outputs no node for this entry.',
+                ],
+                'type' => [
+                    'type' => ['string', 'null'],
+                    'description' => 'A schema.org type such as `Article`. With `override`, the same type as the inherited one layers these properties over the inherited ones; a different type starts fresh.',
+                ],
+                'properties' => [
+                    'type' => 'array',
+                    'items' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'property' => ['type' => 'string', 'description' => 'A schema.org property. Dot paths (`address.streetAddress`) and `@type` keys are allowed.'],
+                            'source' => ['type' => 'string', 'enum' => [PropertyRows::SOURCE_FIELD, PropertyRows::SOURCE_TEMPLATE]],
+                            'value' => ['type' => 'string', 'description' => 'A field handle for `field`, or text for `template` (Twig only when the field allows it).'],
+                        ],
+                        'required' => ['property'],
+                        'additionalProperties' => false,
+                    ],
+                ],
+                'extraJson' => [
+                    'type' => ['string', 'null'],
+                    'description' => 'Extra JSON-LD: a JSON object or array of objects, encoded as a string, added to the page graph.',
+                ],
+            ],
+            'additionalProperties' => false,
+        ];
     }
 
     protected function searchKeywords(mixed $value, ElementInterface $element): string

@@ -38,4 +38,28 @@
         name: 'includeBreadcrumbs',
         on: settings.includeBreadcrumbs,
     }) }}
+
+    <hr>
+
+    <h2>{{ 'Control Panel'|t('app') }}</h2>
+
+    {{ forms.textField({
+        label: 'Sidebar label'|t('schemy'),
+        instructions: 'What the sidebar calls Schemy. Leave blank to use “Schemy”.'|t('schemy'),
+        id: 'pluginName',
+        name: 'pluginName',
+        value: settings.pluginName,
+        placeholder: 'Schemy',
+        maxlength: 100,
+        errors: settings.getErrors('pluginName'),
+    }) }}
+
+    {{ forms.iconPickerField({
+        label: 'Sidebar icon'|t('schemy'),
+        instructions: 'Pick any control panel icon. Leave blank to use Schemy’s icon.'|t('schemy'),
+        id: 'navIcon',
+        name: 'navIcon',
+        value: settings.navIcon ?: null,
+        errors: settings.getErrors('navIcon'),
+    }) }}
 {% endblock %}

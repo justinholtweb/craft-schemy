@@ -198,12 +198,135 @@
         })
           .then(function (response) {
             output.textContent = response.data.json || '—';
+            renderPreviewValidation(root, response.data.validation);
           })
           .catch(function () {
             output.textContent = Craft.t('schemy', 'Preview unavailable.');
+            renderPreviewValidation(root, null);
           });
       });
     }
+  }
+
+  const SEVERITY_LABELS = {
+    error: function () { return Craft.t('schemy', 'Error'); },
+    warning: function () { return Craft.t('schemy', 'Warning'); },
+    notice: function () { return Craft.t('schemy', 'Notice'); },
+  };
+
+  function summarize(validation) {
+    if (!validation.errors && !validation.warnings && !validation.notices) {
+      return Craft.t('schemy', 'No issues found.');
+    }
+    return Craft.t('schemy', '{errors, plural, =1{# error} other{# errors}}, {warnings, plural, =1{# warning} other{# warnings}}, {notices, plural, =1{# notice} other{# notices}}', {
+      errors: validation.errors,
+      warnings: validation.warnings,
+      notices: validation.notices,
+    });
+  }
+
+  // Inline code in messages is written `like this`; escape everything else
+  function formatMessage(message) {
+    const span = document.createElement('span');
+    message.split('`').forEach(function (part, i) {
+      if (i % 2) {
+        const code = document.createElement('code');
+        code.textContent = part;
+        span.appendChild(code);
+      } else {
+        span.appendChild(document.createTextNode(part));
+      }
+    });
+    return span;
+  }
+
+  function fillIssues(tbody, issues) {
+    tbody.textContent = '';
+    issues.forEach(function (issue) {
+      const tr = document.createElement('tr');
+      const severity = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = 'schemy-severity schemy-severity-' + issue.severity;
+      badge.textContent = (SEVERITY_LABELS[issue.severity] || function () { return issue.severity; })();
+      severity.appendChild(badge);
+
+      const where = document.createElement('td');
+      const path = document.createElement('code');
+      path.textContent = issue.path;
+      where.appendChild(path);
+
+      const message = document.createElement('td');
+      message.appendChild(formatMessage(issue.message));
+
+      tr.append(severity, where, message);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderPreviewValidation(root, validation) {
+    const container = root.querySelector('[data-schemy-preview-validation]');
+    if (!container) {
+      return;
+    }
+    if (!validation) {
+      container.hidden = true;
+      return;
+    }
+    container.hidden = false;
+    container.querySelector('[data-schemy-validation-summary]').textContent = summarize(validation);
+    const table = container.querySelector('table');
+    table.hidden = !validation.issues.length;
+    fillIssues(table.querySelector('tbody'), validation.issues);
+  }
+
+  function initValidator(id) {
+    const root = document.getElementById(id);
+    if (!root || root.dataset.schemyReady) {
+      return;
+    }
+    root.dataset.schemyReady = '1';
+
+    const button = root.querySelector('[data-schemy-validate]');
+    const spinner = root.querySelector('[data-schemy-spinner]');
+    const results = root.querySelector('[data-schemy-results]');
+    const heading = root.querySelector('[data-schemy-summary-heading]');
+    const table = root.querySelector('[data-schemy-issues]');
+    const jsonWrapper = root.querySelector('[data-schemy-json-wrapper]');
+    const json = root.querySelector('[data-schemy-json]');
+    const textarea = root.querySelector('textarea[name="json"]');
+
+    button.addEventListener('click', function () {
+      const element = root.querySelector('.elementselect .element[data-id]');
+      const data = element
+        ? {entryId: element.dataset.id, siteId: element.dataset.siteId || ''}
+        : {json: textarea.value};
+
+      if (!element && !textarea.value.trim()) {
+        Craft.cp.displayError(Craft.t('schemy', 'Select an entry or paste some JSON-LD.'));
+        return;
+      }
+
+      button.disabled = true;
+      spinner.hidden = false;
+
+      Craft.sendActionRequest('POST', 'schemy/validator/validate', {data: data})
+        .then(function (response) {
+          const validation = response.data;
+          results.hidden = false;
+          heading.textContent = summarize(validation);
+          table.hidden = !validation.issues.length;
+          fillIssues(table.querySelector('tbody'), validation.issues);
+          jsonWrapper.hidden = !validation.json;
+          json.textContent = validation.json;
+        })
+        .catch(function (e) {
+          Craft.cp.displayError((e.response && e.response.data && e.response.data.message) || Craft.t('schemy', 'Validation failed.'));
+        })
+        .finally(function () {
+          button.disabled = false;
+          spinner.hidden = true;
+        });
+    });
   }
 
   window.Schemy = {
@@ -211,5 +334,6 @@
       initEditors(root || document);
     },
     initField: initField,
+    initValidator: initValidator,
   };
 })(window, document);

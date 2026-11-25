@@ -26,9 +26,10 @@ suggestions are a convenience, not a limit.
 
 ## Does it validate my markup?
 
-No. Schemy guarantees the output is valid JSON and correctly linked, but whether Google shows a
-rich result depends on Google's own requirements for each type. Test pages with Google's Rich
-Results Test.
+Yes. The [validator](https://justinholt.com/plugins/craft-schemy/docs/validator) checks structure,
+likely typos, dates, URLs and the properties Google's rich results need, from the control panel,
+the command line and MCP. It runs offline and approximates Google's rules, so Google's Rich
+Results Test is still the final word on whether a rich result shows.
 
 ## Can editors change schema without an admin?
 

@@ -54,9 +54,22 @@
 
     {% if element and element.id %}
         <div class="schemy-field-preview">
-            <button type="button" class="btn small" data-schemy-preview data-element-id="{{ element.id }}" data-site-id="{{ element.siteId }}">{{ 'Preview JSON-LD'|t('schemy') }}</button>
+            <button type="button" class="btn small" data-schemy-preview data-element-id="{{ element.id }}" data-site-id="{{ element.siteId }}">{{ 'Preview and validate'|t('schemy') }}</button>
             <span class="light">{{ 'Reflects the last saved or autosaved version.'|t('schemy') }}</span>
             <pre class="schemy-preview-output code" data-schemy-preview-output hidden></pre>
+            <div class="schemy-preview-validation" data-schemy-preview-validation hidden>
+                <p><strong data-schemy-validation-summary></strong></p>
+                <table class="data fullwidth schemy-issues" hidden>
+                    <thead>
+                        <tr>
+                            <th scope="col">{{ 'Severity'|t('schemy') }}</th>
+                            <th scope="col">{{ 'Where'|t('schemy') }}</th>
+                            <th scope="col">{{ 'Issue'|t('schemy') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     {% endif %}
 </div>
