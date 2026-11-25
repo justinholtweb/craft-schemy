@@ -75,7 +75,7 @@ class SchemyTools
     /** @return array<string, mixed> */
     #[McpTool(
         name: 'schemy_settings_get',
-        description: 'Gets Schemy’s general settings and site identity: output switches, the identity type and its property rows, and the sidebar label and icon.',
+        description: 'Gets Schemy’s general settings and site identity: output switches, the identity type and its property rows, and the sidebar label and icon (navLabel, navIcon, navIconSvg).',
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]
     #[RequiresAdmin]
@@ -188,7 +188,7 @@ class SchemyTools
     /** @return array<string, mixed> */
     #[McpTool(
         name: 'schemy_settings_set',
-        description: 'Changes Schemy’s general settings. Only the arguments you pass are changed. pluginName and navIcon customize the control panel sidebar; pass an empty string to restore the default. navIcon is a Craft control panel icon name such as sitemap or code.',
+        description: 'Changes Schemy’s general settings. Only the arguments you pass are changed. navLabel, navIcon and navIconSvg customize the control panel sidebar; pass an empty string to restore the default. navIcon is a Craft control panel icon name such as sitemap or code. navIconSvg is one <svg> element, sanitized when drawn, and wins over navIcon.',
         annotations: new ToolAnnotations(idempotentHint: true),
     )]
     #[RequiresAdminChanges]
@@ -197,13 +197,22 @@ class SchemyTools
         ?bool $includeIdentity = null,
         ?bool $includeWebSite = null,
         ?bool $includeBreadcrumbs = null,
-        ?string $pluginName = null,
-        #[JsonSchema(pattern: '^([a-z0-9][a-z0-9-]*)?$')]
+        #[JsonSchema(maxLength: 64)]
+        ?string $navLabel = null,
+        #[JsonSchema(pattern: '^([a-z0-9]+(-[a-z0-9]+)*)?$')]
         ?string $navIcon = null,
+        ?string $navIconSvg = null,
     ): array {
         $changes = array_filter(compact(
-            'autoInject', 'includeIdentity', 'includeWebSite', 'includeBreadcrumbs', 'pluginName', 'navIcon',
+            'autoInject', 'includeIdentity', 'includeWebSite', 'includeBreadcrumbs',
         ), fn($value) => $value !== null);
+
+        // Empty strings restore the defaults
+        foreach (compact('navLabel', 'navIcon', 'navIconSvg') as $key => $value) {
+            if ($value !== null) {
+                $changes[$key] = trim($value) === '' ? null : $value;
+            }
+        }
 
         if ($changes !== [] && !Plugin::getInstance()->schema->saveSettings($changes)) {
             $errors = Plugin::getInstance()->getSettings()->getFirstErrors();

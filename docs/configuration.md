@@ -81,9 +81,11 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 ## Sidebar label and icon
 
 Under **Control Panel** on the same page, **Sidebar label** renames Schemy in the control panel
-sidebar (say, to "Structured Data") and **Sidebar icon** picks any control panel icon. Leave
-either blank for the default. Both are stored in project config with the other settings, as
-`pluginName` and `navIcon`.
+sidebar (say, to "Structured Data"), **Sidebar icon** picks any control panel icon, and **Custom
+SVG icon** takes a pasted `<svg>` element instead, sanitized every time it's drawn. Leave them
+empty for the defaults. They're stored in project config with the other settings, as `navLabel`,
+`navIcon` and `navIconSvg`. An override in Craft's own Settings → Control Panel Navigation wins
+over these.
 
 ## Project config
 

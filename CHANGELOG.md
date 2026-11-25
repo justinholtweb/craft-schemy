@@ -13,8 +13,8 @@
 - Tools for Craft's MCP server: read and validate an entry's JSON-LD, list types and rich result
   rules, and, for admins, read and change section schema, site identity and settings.
 - The Schema field describes its value to Craft's MCP entry tools.
-- **Sidebar label** and **Sidebar icon** settings to rename Schemy and change its icon in the
-  control panel.
+- **Sidebar label**, **Sidebar icon** and **Custom SVG icon** settings to rename Schemy and change
+  its icon in the control panel. Pasted SVG is sanitized every time it's drawn.
 
 ### Changed
 - Schemy now requires Craft 5.12.1 or later.

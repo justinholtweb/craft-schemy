@@ -145,7 +145,7 @@ return [
     'autoInject' => true,
     'includeBreadcrumbs' => false,
     // Rename Schemy and change its icon in the control panel sidebar
-    'pluginName' => 'Structured Data',
+    'navLabel' => 'Structured Data',
     'navIcon' => 'sitemap',
 ];
 ```

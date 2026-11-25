@@ -9,6 +9,7 @@ use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlQueriesEvent;
 use craft\events\RegisterGqlSchemaComponentsEvent;
 use craft\events\RegisterUrlRulesEvent;
+use craft\helpers\Html;
 use craft\helpers\UrlHelper;
 use craft\services\Fields;
 use craft\services\Gql;
@@ -25,6 +26,7 @@ use justinholtweb\schemy\services\Schema;
 use justinholtweb\schemy\services\Validator;
 use justinholtweb\schemy\utilities\ValidatorUtility;
 use justinholtweb\schemy\variables\SchemyVariable;
+use Throwable;
 use yii\base\Event;
 
 /**
@@ -88,22 +90,51 @@ class Plugin extends BasePlugin
             return null;
         }
 
-        $settings = $this->getSettings();
-        $item = parent::getCpNavItem();
-
-        if ($settings->pluginName !== '') {
-            $item['label'] = $settings->pluginName;
-        }
-
-        if ($settings->navIcon !== '') {
-            $item['icon'] = $settings->navIcon;
-        }
-
+        $item = $this->customiseNavItem(parent::getCpNavItem(), $this->getSettings());
         $item['subnav'] = [
             'sections' => ['label' => Craft::t('schemy', 'Sections'), 'url' => 'schemy/sections'],
             'identity' => ['label' => Craft::t('schemy', 'Site Identity'), 'url' => 'schemy/identity'],
             'settings' => ['label' => Craft::t('schemy', 'Settings'), 'url' => 'schemy/settings'],
         ];
+
+        return $item;
+    }
+
+    /**
+     * The sidebar label and icon from settings: pasted SVG (sanitized every time it's drawn), then
+     * an icon name, then Schemy's own icon. Craft's Settings → Control Panel Navigation overrides
+     * still win, because Craft applies them afterwards. A bad value never breaks the nav.
+     *
+     * @param array<string, mixed> $item
+     * @return array<string, mixed>
+     */
+    public function customiseNavItem(array $item, Settings $settings): array
+    {
+        $label = trim((string)$settings->navLabel);
+
+        if ($label !== '') {
+            $item['label'] = $label;
+        }
+
+        $svg = trim((string)$settings->navIconSvg);
+        $icon = trim((string)$settings->navIcon);
+
+        try {
+            if ($svg !== '' && Settings::isSvgMarkup($svg)) {
+                $sanitized = Html::svg($svg, true, true, true);
+
+                if ($sanitized !== '') {
+                    $item['icon'] = $sanitized;
+                    return $item;
+                }
+            }
+
+            if ($icon !== '' && Settings::iconExists($icon)) {
+                $item['icon'] = $icon;
+            }
+        } catch (Throwable $e) {
+            Craft::warning("Couldn’t draw the custom nav icon: {$e->getMessage()}", __METHOD__);
+        }
 
         return $item;
     }

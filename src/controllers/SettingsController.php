@@ -58,8 +58,9 @@ class SettingsController extends Controller
             'includeWebSite' => (bool)$request->getBodyParam('includeWebSite'),
             'includeIdentity' => (bool)$request->getBodyParam('includeIdentity'),
             'includeBreadcrumbs' => (bool)$request->getBodyParam('includeBreadcrumbs'),
-            'pluginName' => trim((string)$request->getBodyParam('pluginName', '')),
-            'navIcon' => trim((string)$request->getBodyParam('navIcon', '')),
+            'navLabel' => trim((string)$request->getBodyParam('navLabel')) ?: null,
+            'navIcon' => trim((string)$request->getBodyParam('navIcon')) ?: null,
+            'navIconSvg' => trim((string)$request->getBodyParam('navIconSvg')) ?: null,
         ]);
     }
 
