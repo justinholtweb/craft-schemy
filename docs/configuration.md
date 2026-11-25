@@ -69,7 +69,7 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 
 ## Output switches
 
-**Settings → Plugins → Schemy** has four switches:
+**Settings → Plugins → Schemy** has four switches (on Craft 5: **Schemy → Settings**):
 
 | Setting | Default | |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ All of the above is plugin settings, so it is stored in project config and deplo
 schema. With `allowAdminChanges` off, the Schemy pages are read-only. Make changes locally and
 deploy them.
 
-Any setting can be overridden in `config/craft/schemy.php`:
+Any setting can be overridden in `config/craft/schemy.php` (on Craft 5: `config/schemy.php`):
 
 ```php
 <?php

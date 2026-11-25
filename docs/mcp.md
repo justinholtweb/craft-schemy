@@ -5,7 +5,7 @@ order: 37
 summary: Tools for AI assistants connected to Craft's MCP server.
 ---
 
-Craft has an MCP server that AI assistants can connect to. Schemy adds tools to it, so an
+Craft has an MCP server that AI assistants can connect to (Craft 5.12.1 and later, and Craft 6). Schemy adds tools to it, so an
 assistant can read and check structured data and, for admins, set it up.
 
 | Tool | Who can use it | |

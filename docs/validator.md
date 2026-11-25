@@ -29,10 +29,14 @@ still the final word.
 
 **Utilities → Schema Validator** (also **Schemy → Validator**) validates what Schemy outputs for an
 entry, given its ID, URI or full URL, or any JSON-LD you paste in, including a whole
-`<script type="application/ld+json">` tag copied from page source. Access follows Craft's utility
-permissions.
+`<script type="application/ld+json">` tag copied from page source. Access follows Craft's
+utility permissions.
 
-The **Schema** row in an entry's sidebar summarizes the results for the saved entry and links to them.
+The **Schema** row in an entry's sidebar summarizes the results for the saved entry and links to
+them.
+
+> **Craft 5:** the utility picks an entry with an entry selector, and the Schema field's
+> **Preview and validate** button shows the results under the preview.
 
 ## From the command line
 
@@ -43,8 +47,10 @@ php artisan schemy:validate --section=news --site=fr --limit=500
 php artisan schemy:validate --file=build/schema.json
 ```
 
+> **Craft 5:** `php craft schemy/validate`, with the same options. `--entry` takes an ID.
+
 With `--section`, only entries with errors list their issues; add `--all` to see warnings and
-notices too. The command exits with code 1 when it finds an error (2 on bad usage), so it can stop a
+notices too. The command exits with code 1 when it finds an error (65 on Craft 5), so it can stop a
 deploy or fail a CI job.
 
 ## From MCP and PHP
@@ -56,6 +62,7 @@ AI assistants connected to Craft's MCP server can call `schemy_jsonld_validate` 
 use JustinHoltWeb\Schemy\Services\Validator;
 
 $result = app(Validator::class)->validateElement($entry);
+// Craft 5: \justinholtweb\schemy\Plugin::getInstance()->validator->validateElement($entry)
 $result->hasErrors();
 $result->toArray(); // ['valid' => bool, 'errors' => int, 'warnings' => int, 'notices' => int, 'issues' => [...]]
 ```
