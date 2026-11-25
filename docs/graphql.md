@@ -32,7 +32,8 @@ for pages that aren't entries.
 `<script type="application/ld+json">` tag, escaped so it's safe to output as-is.
 
 The query respects the schema's scope: it only finds entries in sections and sites the schema
-can read, and returns `null` otherwise.
+can read, and returns `null` otherwise. On Craft 6, an authenticated schema only finds entries its
+user can view.
 
 ## The Schema field
 

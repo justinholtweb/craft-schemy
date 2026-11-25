@@ -10,6 +10,8 @@ summary: Missing output, empty properties, and running alongside an SEO plugin.
 - **The template has no `<head>`.** Automatic output goes where Craft puts head HTML. Templates
   that never output `</head>`, such as XML feeds, get nothing, by design. Use
   `{{ craft.schemy.render() }}` if you need it elsewhere.
+- **A Blade layout without `@craftHead`** (Craft 6). Twig layouts get the placeholder
+  automatically; Blade layouts must call `@craftHead`, `@craftBeginBody` and `@craftEndBody`.
 - **Output automatically is off**, and the template doesn't call `craft.schemy.render()`.
 - **The page called `craft.schemy.disable()`**, perhaps in a layout or a partial.
 
@@ -27,9 +29,9 @@ entry produces no property rather than an empty string. Also check:
 
 - **Template errors.** A template that fails to render is skipped and logged as a warning that
   starts with `Schemy couldn't render template`. It never breaks the page. Check
-  `storage/logs/web-*.log`.
-- **The field isn't in this entry's layout.** The field dropdown marks handles that aren't in
-  the current layout as *not in this layout*.
+  `storage/logs/laravel-*.log` (on Craft 5, `storage/logs/web-*.log`).
+- **The field isn't in this entry's layout**, or a Field-source value isn't a field handle.
+  Plain text belongs in the Template source.
 - **Twig in entry values is off.** On the per-entry field, `{title}` is output literally unless
   the field allows Twig.
 
@@ -38,6 +40,10 @@ entry produces no property rather than an empty string. Also check:
 Both plugins will output JSON-LD. That's valid, but search engines then see two descriptions of
 the same page. Turn off the other plugin's structured data, or turn off Schemy's identity and
 WebSite nodes and keep only its main entities.
+
+## `Undefined property … CraftVariable::$schemy` in Blade
+
+On Craft 6, `craft.schemy` is a method in Blade: `$craft->schemy()`.
 
 ## The settings pages are read-only
 

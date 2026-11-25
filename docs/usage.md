@@ -22,27 +22,36 @@ Add the **Schema (Schemy)** field to any field layout. It has three modes:
 The collapsible *Additional JSON-LD* box takes a raw JSON object or array of objects, added to
 the page graph as-is. Invalid JSON fails validation when the entry is saved.
 
-### Preview
+### Checking the output
 
-**Preview and validate** shows the exact graph the front end will output for the last saved or
-autosaved version of the entry, with any issues the
-[validator](https://justinholt.com/plugins/craft-schemy/docs/validator) finds listed below it.
+The entry sidebar's **Schema** row shows the main type Schemy outputs for the saved entry and a
+summary of what the [validator](https://justinholt.com/plugins/craft-schemy/docs/validator)
+finds, linking to the full results.
+
+> **Craft 5:** the field has a **Preview and validate** button instead. It shows the exact graph
+> for the last saved or autosaved version of the entry, with the validator's findings below it.
 
 ### Twig in entry values
 
 Template values typed on entries are plain text by default and never run as Twig. Otherwise
 anyone who can edit an entry could run arbitrary Twig, including queries that publish data you
 never meant to expose. Switch on **Parse Twig in values** in the field's settings if you trust
-everyone who edits those entries.
+everyone who edits those entries. The values then render in Twig's sandbox.
+
+> **Craft 5:** with **Parse Twig in values** on, entry values run as ordinary Twig, without the
+> sandbox.
 
 Mappings on the section and identity pages are admin-only, so they always parse Twig.
 
 ### Other element types
 
-The field works on categories, users, Commerce products, or anything else with a field layout.
+The field works on users, addresses, Commerce products, or anything else with a field layout.
 Section defaults only apply to entries, so other element types get schema from the field alone.
 
 ## Templates
+
+Automatic output needs nothing in your templates. Twig layouts get the `<head>` placeholder
+automatically; on Craft 6, Blade layouts need `@craftHead`.
 
 ```twig
 {# Place the output yourself (also stops automatic output for this request) #}
@@ -61,6 +70,13 @@ Section defaults only apply to entries, so other element types get schema from t
 {% set nodes = craft.schemy.graph(entry) %}
 ```
 
+On Craft 6, the same helpers work in Blade through `$craft->schemy()`:
+
+```blade
+{!! $craft->schemy()->render($entry ?? null) !!}
+@php($craft->schemy()->add(['@type' => 'Event', 'name' => 'Launch party']))
+```
+
 ## How the graph is linked
 
 Nodes reference each other by `@id`:
@@ -74,12 +90,23 @@ Nodes reference each other by `@id`:
 ## Changing the graph from PHP
 
 ```php
-use justinholtweb\schemy\events\GraphEvent;
-use justinholtweb\schemy\services\Schema;
-use yii\base\Event;
+use Illuminate\Support\Facades\Event;
+use JustinHoltWeb\Schemy\Events\GraphResolving;
 
-Event::on(Schema::class, Schema::EVENT_BEFORE_RENDER_GRAPH, function (GraphEvent $event) {
+Event::listen(function (GraphResolving $event) {
     // $event->element is the page's element, or null
     $event->graph[] = ['@type' => 'SiteNavigationElement', 'name' => 'Main'];
 });
 ```
+
+> **Craft 5:**
+>
+> ```php
+> use justinholtweb\schemy\events\GraphEvent;
+> use justinholtweb\schemy\services\Schema;
+> use yii\base\Event;
+>
+> Event::on(Schema::class, Schema::EVENT_BEFORE_RENDER_GRAPH, function (GraphEvent $event) {
+>     $event->graph[] = ['@type' => 'SiteNavigationElement', 'name' => 'Main'];
+> });
+> ```

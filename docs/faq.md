@@ -24,6 +24,12 @@ BlogPosting, NewsArticle, WebPage, FAQPage, Event, Product, LocalBusiness, Perso
 JobPosting, Course and VideoObject. You can type any schema.org type or property name; the
 suggestions are a convenience, not a limit.
 
+## Does it work with Craft 6?
+
+Yes. Schemy 6 is a native Craft 6 plugin, in beta while Craft 6 is. It has the same features as
+Schemy 5.1, plus Blade support. Settings and entry values carry over: see
+[Upgrading to Craft 6](https://justinholt.com/plugins/craft-schemy/docs/upgrading).
+
 ## Does it validate my markup?
 
 Yes. The [validator](https://justinholt.com/plugins/craft-schemy/docs/validator) checks structure,
