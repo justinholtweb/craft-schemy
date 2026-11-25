@@ -222,6 +222,44 @@ class SchemaTypes
     }
 
     /**
+     * Returns the type name trimmed, or an empty string if it isn't a valid schema.org-style name.
+     */
+    public static function cleanName(mixed $type): string
+    {
+        $type = trim((string)$type);
+        return preg_match('/^[A-Za-z][A-Za-z0-9]*$/', $type) ? $type : '';
+    }
+
+    /**
+     * Returns the candidate closest to `$name` when it's a likely typo (a small edit distance,
+     * or the same name in a different case), or null.
+     *
+     * @param string[] $candidates
+     */
+    public static function closest(string $name, array $candidates): ?string
+    {
+        $lower = strtolower($name);
+        $best = null;
+        $bestDistance = PHP_INT_MAX;
+        $maxDistance = strlen($name) <= 5 ? 1 : 2;
+
+        foreach ($candidates as $candidate) {
+            if ($candidate === $name) {
+                return null;
+            }
+
+            $distance = strtolower($candidate) === $lower ? 0 : levenshtein($lower, strtolower($candidate));
+
+            if ($distance <= $maxDistance && $distance < $bestDistance) {
+                $best = $candidate;
+                $bestDistance = $distance;
+            }
+        }
+
+        return $best;
+    }
+
+    /**
      * Returns every property for a type, including inherited ones, as `name => kind`.
      */
     public static function properties(string $type): array
@@ -266,6 +304,11 @@ class SchemaTypes
         }
 
         return [];
+    }
+
+    public static function parent(string $type): ?string
+    {
+        return self::TYPES[$type]['parent'] ?? null;
     }
 
     public static function isA(string $type, string $ancestor): bool

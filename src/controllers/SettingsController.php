@@ -58,6 +58,9 @@ class SettingsController extends Controller
             'includeWebSite' => (bool)$request->getBodyParam('includeWebSite'),
             'includeIdentity' => (bool)$request->getBodyParam('includeIdentity'),
             'includeBreadcrumbs' => (bool)$request->getBodyParam('includeBreadcrumbs'),
+            'navLabel' => trim((string)$request->getBodyParam('navLabel')) ?: null,
+            'navIcon' => trim((string)$request->getBodyParam('navIcon')) ?: null,
+            'navIconSvg' => trim((string)$request->getBodyParam('navIconSvg')) ?: null,
         ]);
     }
 
@@ -69,7 +72,7 @@ class SettingsController extends Controller
         $request = Craft::$app->getRequest();
 
         return $this->save([
-            'identityType' => trim((string)$request->getBodyParam('type', 'Organization')) ?: 'Organization',
+            'identityType' => SchemaTypes::cleanName($request->getBodyParam('type', '')) ?: 'Organization',
             'identity' => PropertyRows::normalize($request->getBodyParam('properties', [])),
         ]);
     }
@@ -78,10 +81,7 @@ class SettingsController extends Controller
     {
         $plugin = Plugin::getInstance();
 
-        // savePluginSettings() only writes the keys it's given, so always pass everything
-        $settings = array_merge($plugin->getSettings()->toArray(), $changes);
-
-        if (!Craft::$app->getPlugins()->savePluginSettings($plugin, $settings)) {
+        if (!$plugin->schema->saveSettings($changes)) {
             return $this->asModelFailure(
                 $plugin->getSettings(),
                 Craft::t('schemy', 'Couldn’t save settings.'),

@@ -38,4 +38,40 @@
         name: 'includeBreadcrumbs',
         on: settings.includeBreadcrumbs,
     }) }}
+
+    <hr>
+
+    <h2>{{ 'Control Panel'|t('app') }}</h2>
+    <p class="light">{{ 'How Schemy appears in the sidebar. An override set in Settings → Control Panel Navigation takes precedence over these.'|t('schemy') }}</p>
+
+    {{ forms.textField({
+        label: 'Sidebar label'|t('schemy'),
+        instructions: 'Leave empty for “Schemy”.'|t('schemy'),
+        id: 'navLabel',
+        name: 'navLabel',
+        value: settings.navLabel,
+        placeholder: 'Schemy',
+        maxlength: 64,
+        errors: settings.getErrors('navLabel'),
+    }) }}
+
+    {{ forms.iconPickerField({
+        label: 'Sidebar icon'|t('schemy'),
+        instructions: 'Leave empty for Schemy’s own icon.'|t('schemy'),
+        id: 'navIcon',
+        name: 'navIcon',
+        value: settings.navIcon,
+        errors: settings.getErrors('navIcon'),
+    }) }}
+
+    {{ forms.textareaField({
+        label: 'Custom SVG icon'|t('schemy'),
+        instructions: 'Optional. Paste one `<svg>` element to use instead of the icon above. It’s sanitized every time it’s drawn; a single-color icon using `currentColor` matches the rest of the sidebar.'|t('schemy'),
+        id: 'navIconSvg',
+        name: 'navIconSvg',
+        value: settings.navIconSvg,
+        rows: 4,
+        class: 'code',
+        errors: settings.getErrors('navIconSvg'),
+    }) }}
 {% endblock %}

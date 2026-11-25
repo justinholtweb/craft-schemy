@@ -54,7 +54,7 @@ instead of a string:
 
 ## Entry type overrides
 
-On a section's page, each of its entry types can switch on its own schema. In Craft 5 an entry
+On a section's page, each of its entry types can switch on its own schema. In Craft an entry
 type can belong to several sections, so the override is scoped to this section only. Your
 `article` type can be a `NewsArticle` in News and a `BlogPosting` in Blog.
 
@@ -69,7 +69,7 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 
 ## Output switches
 
-**Schemy → Settings** has four switches:
+**Settings → Plugins → Schemy** has four switches (on Craft 5: **Schemy → Settings**):
 
 | Setting | Default | |
 | --- | --- | --- |
@@ -78,13 +78,22 @@ Identity values are always templates, and they render per site, so `{{ siteName 
 | Include WebSite | On | A WebSite node for the current site |
 | Include breadcrumbs | On | A BreadcrumbList from the home page and, in structures, the entry's ancestors |
 
+## Sidebar label and icon
+
+Under **Control Panel** on the same page, **Sidebar label** renames Schemy in the control panel
+sidebar (say, to "Structured Data"), **Sidebar icon** picks any control panel icon, and **Custom
+SVG icon** takes a pasted `<svg>` element instead, sanitized every time it's drawn. Leave them
+empty for the defaults. They're stored in project config with the other settings, as `navLabel`,
+`navIcon` and `navIconSvg`. An override in Craft's own Settings → Control Panel Navigation wins
+over these.
+
 ## Project config
 
 All of the above is plugin settings, so it is stored in project config and deploys with your
 schema. With `allowAdminChanges` off, the Schemy pages are read-only. Make changes locally and
 deploy them.
 
-Any setting can be overridden in `config/schemy.php`:
+Any setting can be overridden in `config/craft/schemy.php` (on Craft 5: `config/schemy.php`):
 
 ```php
 <?php

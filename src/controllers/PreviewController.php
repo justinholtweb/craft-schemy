@@ -6,6 +6,7 @@ use Craft;
 use craft\base\ElementInterface;
 use craft\web\Controller;
 use justinholtweb\schemy\Plugin;
+use justinholtweb\schemy\services\Schema;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -45,19 +46,16 @@ class PreviewController extends Controller
             throw new ForbiddenHttpException('User not authorized to view this element.');
         }
 
-        // Render object templates as the front end would
-        $sites = Craft::$app->getSites();
-        $originalSite = $sites->getCurrentSite();
-        $sites->setCurrentSite($element->getSite());
+        $plugin = Plugin::getInstance();
+        $document = $plugin->schema->getDocumentForElement($element);
 
-        try {
-            $document = Plugin::getInstance()->schema->getDocument($element);
-        } finally {
-            $sites->setCurrentSite($originalSite);
+        if ($document === null) {
+            return $this->asJson(['json' => '', 'validation' => null]);
         }
 
         return $this->asJson([
-            'json' => $document === null ? '' : json_encode($document, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            'json' => Schema::encode($document),
+            'validation' => $plugin->validator->validateDocument($document)->toArray(),
         ]);
     }
 }

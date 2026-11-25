@@ -4,7 +4,7 @@ Schema.org JSON-LD for Craft CMS 5. You set schema on sections (including single
 
 ## Requirements
 
-- Craft CMS 5.0+
+- Craft CMS 5.12.1+ (Schemy 5.0.0 supports any Craft 5)
 - PHP 8.2+
 
 ## Installation
@@ -109,6 +109,29 @@ Other helpers:
 {% set nodes = craft.schemy.graph(entry) %}
 ```
 
+## Validator
+
+Checks JSON-LD for broken structure, likely typos, bad dates and URLs, and the properties Google’s rich results need, without any outbound requests.
+
+- **Utilities → Schema Validator**: validate an entry or pasted JSON-LD
+- The Schema field’s **Preview and validate** button
+- `php craft schemy/validate --section=news` (exits non-zero on errors, for CI)
+- `Plugin::getInstance()->validator->validateElement($entry)`
+
+## GraphQL
+
+Enable the Schemy component in a GraphQL schema, then:
+
+```graphql
+{ schemy(uri: "news/harbour-reopens") { jsonLd script } }
+```
+
+Leave out `id`/`uri` for the site-wide nodes. The Schema field also returns `mode`, `type`, `properties`, `extraJson` and the rendered `jsonLd`, and accepts a `SchemyFieldInput` in mutations.
+
+## MCP
+
+On Craft 5.12.1+, Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, and, for admins, `schemy_settings_get`, `schemy_sections_list`, `schemy_section_schema_set`, `schemy_identity_set` and `schemy_settings_set` (writes need `allowAdminChanges`). The Schema field describes its value to Craft’s own entry tools, so assistants can set per-entry schema too.
+
 ## Settings and environments
 
 All Schemy configuration (section mappings, identity, and toggles) lives in plugin settings, so it’s stored in **project config** and deploys like the rest of your schema. When `allowAdminChanges` is off, the Schemy pages are read-only.
@@ -121,6 +144,9 @@ You can also override any setting in `config/schemy.php`:
 return [
     'autoInject' => true,
     'includeBreadcrumbs' => false,
+    // Rename Schemy and change its icon in the control panel sidebar
+    'navLabel' => 'Structured Data',
+    'navIcon' => 'sitemap',
 ];
 ```
 

@@ -24,11 +24,18 @@ BlogPosting, NewsArticle, WebPage, FAQPage, Event, Product, LocalBusiness, Perso
 JobPosting, Course and VideoObject. You can type any schema.org type or property name; the
 suggestions are a convenience, not a limit.
 
+## Does it work with Craft 6?
+
+Yes. Schemy 6 is a native Craft 6 plugin, in beta while Craft 6 is. It has the same features as
+Schemy 5.1, plus Blade support. Settings and entry values carry over: see
+[Upgrading to Craft 6](https://justinholt.com/plugins/craft-schemy/docs/upgrading).
+
 ## Does it validate my markup?
 
-No. Schemy guarantees the output is valid JSON and correctly linked, but whether Google shows a
-rich result depends on Google's own requirements for each type. Test pages with Google's Rich
-Results Test.
+Yes. The [validator](https://justinholt.com/plugins/craft-schemy/docs/validator) checks structure,
+likely typos, dates, URLs and the properties Google's rich results need, from the control panel,
+the command line and MCP. It runs offline and approximates Google's rules, so Google's Rich
+Results Test is still the final word on whether a rich result shows.
 
 ## Can editors change schema without an admin?
 

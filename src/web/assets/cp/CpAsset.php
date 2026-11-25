@@ -33,6 +33,13 @@ class CpAsset extends AssetBundle
             $view->registerTranslations('schemy', [
                 'Preview unavailable.',
                 'Loading…',
+                'Error',
+                'Warning',
+                'Notice',
+                'No issues found.',
+                '{errors, plural, =1{# error} other{# errors}}, {warnings, plural, =1{# warning} other{# warnings}}, {notices, plural, =1{# notice} other{# notices}}',
+                'Select an entry or paste some JSON-LD.',
+                'Validation failed.',
             ]);
         }
     }

@@ -1,5 +1,29 @@
 # Release Notes for Schemy
 
+## 5.1.0 - 2026-11-25
+
+### Added
+- A schema validator, offline, that checks structure, likely typos in type and property names,
+  ISO 8601 dates, absolute URLs, `@id` use, and the properties Google's rich results require or
+  recommend. It's at **Utilities → Schema Validator**, under the Schema field's preview, in
+  `php craft schemy/validate` (non-zero exit on errors) and in the `validator` service.
+- GraphQL: a `schemy` query returns an entry's JSON-LD by ID or URI, or the site-wide nodes, and
+  respects the schema's sections and sites. The Schema field returns its settings and the rendered
+  `jsonLd`, and can be saved through mutations.
+- Tools for Craft's MCP server: read and validate an entry's JSON-LD, list types and rich result
+  rules, and, for admins, read and change section schema, site identity and settings.
+- The Schema field describes its value to Craft's MCP entry tools.
+- **Sidebar label**, **Sidebar icon** and **Custom SVG icon** settings to rename Schemy and change
+  its icon in the control panel. Pasted SVG is sanitized every time it's drawn.
+
+### Changed
+- Schemy now requires Craft 5.12.1 or later.
+- The field's **Preview JSON-LD** button is now **Preview and validate**.
+
+### Fixed
+- A settings save that failed validation no longer leaves the rejected values in place for the
+  rest of the request.
+
 ## 5.0.0
 
 Initial release.
