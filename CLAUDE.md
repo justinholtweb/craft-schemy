@@ -29,11 +29,17 @@ no `craftcms/yii2-adapter`, following the family plan in `~/Sites/plugin-testing
 
 ### Where config lives
 
-Same as 5.x: `sections` keyed by section UID → `{type, properties, entryTypes: {entryTypeUid:
-{override, type, properties}}}`, plus identity, switches and `navLabel`/`navIcon`/`navIconSvg`, all
-in plugin settings (project config). Per entry: the `SchemaField` value (`Models\SchemaOverride`).
-Save settings through `Schema::saveSettings()`: Craft applies values before validating, and it rolls
-a rejected save back.
+Same as 5.2: section, entry type and identity schema in the `schemy_schemas` table through
+`Services\Store` (one row per scope, `identity` or a section UID, with `type`, `properties`,
+`entryTypes` and `untrusted`), so it's editable where `allowAdminChanges` is off (issue #1).
+`untrusted` is set when a non-admin saves values containing `{` (`Store::isTrusted()`: a `CraftUser` contract, not the
+`User` element, since `currentUser()` returns the app's model; only admins or code passing `true`
+are trusted) and sticks through admin saves until an admin switches on "Run these values as Twig"
+(`trustTwig`, `SectionsController::vouch()`) or no value contains `{`. Twig in untrusted rows is
+never run, not even sandboxed (the sandbox still allows `entry.author.email`): `buildNode()`'s
+`'untrusted'` mode fills in only `{{ siteName }}`/`{{ siteUrl }}`. Export/import carries the flag. Switches and
+`navLabel`/`navIcon`/`navIconSvg` are plugin settings (project config); save them through
+`Schema::saveSettings()`, which rolls a rejected save back. Per entry: the `SchemaField` value.
 
 ### Resolution and merge
 
@@ -83,7 +89,9 @@ see its README.
 
 - `t('…', category: 'schemy')` for user-facing strings; `lang/en/schemy.php` lists overrides
 - Business logic in services; controllers are thin `readonly` classes with injected services
-- CP screens are admin-only (`RequireAdmin`); saves also need `RequireAdminChanges`, and screens
-  render read-only (`ControlMode::ReadOnly`) without `allowAdminChanges`
+- Sections and Site Identity routes need `can:schemy-editSections` / `can:schemy-editIdentity`
+  (inside `can:accessPlugin-schemy`); a section also needs `viewEntries:<uid>`
+  (`Plugin::canManageSection()`, used by the screens and MCP). Use `Gate`, not `$user->can()`.
+  Plugin settings are admin-only and read-only without `allowAdminChanges`
 - Text settings are nullable (Laravel turns blank input into null); never mark settings `required`
 - Every template-facing feature works in Twig and Blade

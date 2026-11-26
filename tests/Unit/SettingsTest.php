@@ -19,7 +19,6 @@ it('validates the sidebar icon and SVG', function (array $values, array $errorKe
     'one svg element' => [['navIconSvg' => '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'], []],
     'a file path' => [['navIconSvg' => '/etc/passwd'], ['navIconSvg']],
     'a long label' => [['navLabel' => str_repeat('x', 65)], ['navLabel']],
-    'a bad identity type' => [['identityType' => 'Not a type'], ['identityType']],
 ]);
 
 it('sanitizes a pasted SVG icon and applies the label', function () {

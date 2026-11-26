@@ -1,5 +1,29 @@
 # Release Notes for Schemy
 
+## 6.0.0-beta.2 - 2026-11-26
+
+Brings Schemy 5.2's changes to Craft 6. Sites upgrade from Schemy 5.2.0 or later.
+
+### Added
+- Permissions: **Edit section and entry type schema** and **Edit site identity**, so people who
+  aren't admins can manage schema. A section's schema also needs permission to view its entries.
+  Schemy's sidebar item and screens follow them.
+  ([#1](https://github.com/justinholtweb/craft-schemy/issues/1))
+- `php artisan schemy:schemas:export` and `schemy:schemas:import` (and `php craft
+  schemy/schemas/export|import`), to copy section schema and the identity between environments.
+  The file format matches Schemy 5.2's.
+
+### Changed
+- Section schema, entry type overrides and the site identity are stored in Schemy's own table
+  instead of project config, so they can be edited where `allowAdminChanges` is off. A 6.0.0-beta.1
+  site's config is moved into the table by the update.
+- The MCP tools `schemy_sections_list`, `schemy_section_schema_set` and `schemy_identity_set` need
+  Schemy's permissions instead of an admin, and work where `allowAdminChanges` is off.
+- Twig in values saved on the section and identity pages by someone who isn't an admin isn't run:
+  they're output as text, with `{{ siteName }}` and `{{ siteUrl }}` filled in, until an admin
+  switches on **Run these values as Twig** on that page.
+- Requires Schemy 5.2.0 to upgrade from Craft 5.
+
 ## 6.0.0-beta.1 - 2026-11-25
 
 The Craft 6 line: a native port with no `craftcms/yii2-adapter`. Requires Craft 6.0.0-beta.1 and PHP 8.5. See the

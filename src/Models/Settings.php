@@ -13,11 +13,12 @@ use Throwable;
 use function CraftCms\Cms\t;
 
 /**
- * Schemy's settings. The keys are the same as Schemy 5's, so an upgraded site keeps its project
- * config, and `config/craft/schemy.php` overrides them as `config/schemy.php` did.
+ * Schemy's settings: the output switches and the sidebar. The keys are the same as Schemy 5's,
+ * so an upgraded site keeps its project config, and `config/craft/schemy.php` overrides them as
+ * `config/schemy.php` did.
  *
- * Property rows everywhere share one shape:
- * `['property' => 'headline', 'source' => 'field'|'template', 'value' => 'title']`
+ * Section, entry type and site identity schema are content, not settings: they live in Schemy's
+ * table (`Services\Store`) so permitted users can edit them in any environment.
  *
  * Text settings are nullable: Laravel turns a blank field into null before Craft assigns it.
  */
@@ -38,30 +39,6 @@ class Settings extends PluginSettings
     /** Include the site identity (Organization, Person, LocalBusiness, …) node. */
     public bool $includeIdentity = true;
 
-    /** schema.org type for the site identity node. */
-    public ?string $identityType = 'Organization';
-
-    /** Property rows for the site identity node. Values are always Twig templates. */
-    public array $identity = [
-        ['property' => 'name', 'source' => 'template', 'value' => '{{ siteName }}'],
-        ['property' => 'url', 'source' => 'template', 'value' => '{{ siteUrl }}'],
-    ];
-
-    /**
-     * Schema config per section, keyed by section UID:
-     *
-     * ```php
-     * '<sectionUid>' => [
-     *     'type' => 'Article',
-     *     'properties' => [ ...rows ],
-     *     'entryTypes' => [
-     *         '<entryTypeUid>' => ['override' => true, 'type' => 'NewsArticle', 'properties' => [ ...rows ]],
-     *     ],
-     * ]
-     * ```
-     */
-    public array $sections = [];
-
     /** The CP sidebar label. Empty uses "Schemy". */
     public ?string $navLabel = null;
 
@@ -79,9 +56,6 @@ class Settings extends PluginSettings
             'includeWebSite' => ['boolean'],
             'includeBreadcrumbs' => ['boolean'],
             'includeIdentity' => ['boolean'],
-            'identityType' => ['nullable', 'string', 'regex:/^[A-Za-z][A-Za-z0-9]*$/'],
-            'identity' => ['array'],
-            'sections' => ['array'],
             'navLabel' => ['nullable', 'string', 'max:64'],
             'navIcon' => ['nullable', 'string', 'max:64', 'regex:/^[a-z0-9\-]+(:[a-z0-9\-]+)?$/'],
             'navIconSvg' => ['nullable', 'string', 'max:'.self::MAX_SVG_BYTES],
@@ -92,7 +66,6 @@ class Settings extends PluginSettings
     public function getMessages(): array
     {
         return [
-            'identityType.regex' => t('Enter a schema.org type name, such as Organization.', category: 'schemy'),
             'navIcon.regex' => t('Choose an icon from the icon picker.', category: 'schemy'),
         ];
     }
@@ -103,7 +76,7 @@ class Settings extends PluginSettings
     #[Override]
     public function validate(array|string|null $attributeNames = null, bool $clearErrors = true, bool $throw = false): bool
     {
-        foreach (['navLabel', 'navIcon', 'navIconSvg', 'identityType'] as $attribute) {
+        foreach (['navLabel', 'navIcon', 'navIconSvg'] as $attribute) {
             $value = $this->$attribute;
             $this->$attribute = is_string($value) && trim($value) !== '' ? trim($value) : null;
         }

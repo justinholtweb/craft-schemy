@@ -130,13 +130,13 @@ Leave out `id`/`uri` for the site-wide nodes. Only entries in the schema’s sec
 
 ## MCP
 
-Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, and, for admins, `schemy_settings_get`, `schemy_sections_list`, `schemy_section_schema_set`, `schemy_identity_set` and `schemy_settings_set` (writes need `allowAdminChanges` and the token’s full-access scope). The names and input schemas match Schemy 5.1’s. The Schema field describes its value to Craft’s own element tools, so assistants can set per-entry schema too.
+Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, `schemy_sections_list`, `schemy_section_schema_set` and `schemy_identity_set` (for users with Schemy’s permissions), and, for admins, `schemy_settings_get` and `schemy_settings_set` (which needs `allowAdminChanges`). Writes need the token’s full-access scope. The names and input schemas match Schemy 5’s. The Schema field describes its value to Craft’s own element tools, so assistants can set per-entry schema too.
 
 ## Settings and environments
 
-All Schemy configuration (section mappings, identity, switches, sidebar label and icon) lives in plugin settings, so it’s stored in **project config** and deploys like the rest of your schema. When `allowAdminChanges` is off, the Schemy screens are read-only. General settings are at **Settings → Plugins → Schemy**.
+Section mappings, entry type overrides and the site identity are stored in Schemy’s own table, so they can be edited in any environment, production included. Non-admins need the **Edit section and entry type schema** permission (plus permission to view a section’s entries) or **Edit site identity**. Copy them between environments with `php artisan schemy:schemas:export --file=schemy.json` and `schemy:schemas:import`.
 
-You can also override any setting in `config/craft/schemy.php`:
+The output switches and sidebar settings are plugin settings in **project config**, at **Settings → Plugins → Schemy**, read-only where `allowAdminChanges` is off. You can override them in `config/craft/schemy.php`:
 
 ```php
 <?php
@@ -169,7 +169,8 @@ Event::listen(function (GraphResolving $event) {
 - **`Undefined property … CraftVariable::$schemy` in Blade.** It’s a method there: `$craft->schemy()`.
 - **The main entity is missing.** Check **Schemy → Sections**: the section (or the entry type override) needs a type. The entry sidebar’s **Schema** row says what Schemy outputs for the saved entry.
 - **A Field-source property is empty.** The value must be a field handle on the entry’s layout, or one of `title`, `url`, `slug`, `postDate`, `dateCreated`, `dateUpdated`, `expiryDate`, `author`. Plain text belongs in the Template source.
-- **The screens are read-only.** `allowAdminChanges` is off in this environment; change settings in development and deploy project config.
+- **The settings screen is read-only.** `allowAdminChanges` is off in this environment; change settings in development and deploy project config. Section schema and the identity stay editable.
+- **Section schema didn’t deploy.** It’s stored in the database, not project config: use `schemy:schemas:export` and `schemy:schemas:import`.
 - **The `schemy` GraphQL query is missing.** Enable the Schemy component on the schema, and the sections and sites you want it to read.
 
 ## Development

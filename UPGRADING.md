@@ -4,7 +4,7 @@ Schemy 6 is a native Craft 6 plugin. It needs Craft 6 and PHP 8.5, and has no `c
 
 ## Before you start
 
-Update to **Schemy 5.1.0** on Craft 5 first and run its migrations. Schemy 6 refuses to install over anything older (`$minVersionRequired`).
+Update to **Schemy 5.2.0** on Craft 5 first and run its migrations. Schemy 6 refuses to install over anything older (`$minVersionRequired`).
 
 ## Upgrade
 
@@ -12,7 +12,7 @@ Update to **Schemy 5.1.0** on Craft 5 first and run its migrations. Schemy 6 ref
 2. Require Schemy 6:
 
    ```sh
-   composer require justinholtweb/craft-schemy:^6.0.0-beta.1
+   composer require justinholtweb/craft-schemy:^6.0.0-beta.2
    php artisan craft:up
    ```
 
@@ -20,7 +20,8 @@ Update to **Schemy 5.1.0** on Craft 5 first and run its migrations. Schemy 6 ref
 
 ## What carries over
 
-- Every setting: section and entry type schema, site identity, output switches, and the sidebar label and icon. The project config keys are unchanged.
+- Every setting: section and entry type schema and site identity (in Schemy's `schemy_schemas` table, unchanged), and the output switches and sidebar label and icon (project config, same keys).
+- Schemy's permissions, with the same names.
 - Every entry's Schema field value.
 - The JSON-LD itself. A page outputs the same graph as before.
 - `craft.schemy.render()`, `add()`, `setElement()`, `disable()` and `graph()` in Twig.

@@ -1,7 +1,7 @@
 {
     "name": "justinholtweb/craft-schemy",
     "description": "Schema.org JSON-LD for Craft CMS 6 sections, entry types and individual entries, without the rest of an SEO suite. Map the fields you already have to the structured data search engines read.",
-    "version": "6.0.0-beta.1",
+    "version": "6.0.0-beta.2",
     "type": "craft-plugin",
     "keywords": [
         "craft",

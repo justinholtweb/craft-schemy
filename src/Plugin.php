@@ -11,6 +11,7 @@ use CraftCms\Cms\Element\Events\ElementMetadataResolving;
 use CraftCms\Cms\Gql\Events\GqlSchemaComponentsResolving;
 use CraftCms\Cms\Mcp\CapabilityRegistry;
 use CraftCms\Cms\Plugin\Plugin as BasePlugin;
+use CraftCms\Cms\Section\Data\Section;
 use CraftCms\Cms\Support\Html;
 use CraftCms\Cms\Twig\Events\PageEnded;
 use CraftCms\Cms\Twig\Variables\CraftVariable;
@@ -22,8 +23,13 @@ use CraftCms\Cms\Ui\Nodes\Field;
 use CraftCms\Cms\Ui\Nodes\Heading;
 use CraftCms\Cms\Ui\Ui;
 use CraftCms\Cms\Ui\UiContext;
+use CraftCms\Cms\User\Contracts\CraftUser;
+use CraftCms\Cms\User\Data\Permission;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use JustinHoltWeb\Schemy\Console\Commands\ExportSchemasCommand;
+use JustinHoltWeb\Schemy\Console\Commands\ImportSchemasCommand;
 use JustinHoltWeb\Schemy\Console\Commands\ValidateCommand;
 use JustinHoltWeb\Schemy\Fields\SchemaField;
 use JustinHoltWeb\Schemy\Gql\SchemyQuery;
@@ -31,6 +37,7 @@ use JustinHoltWeb\Schemy\Listeners\AddEditorMetadata;
 use JustinHoltWeb\Schemy\Listeners\InjectJsonLd;
 use JustinHoltWeb\Schemy\Mcp\SchemyTools;
 use JustinHoltWeb\Schemy\Models\Settings;
+use JustinHoltWeb\Schemy\Services\Store;
 use JustinHoltWeb\Schemy\Services\Validator;
 use JustinHoltWeb\Schemy\Twig\SchemyVariable;
 use JustinHoltWeb\Schemy\Utilities\ValidatorUtility;
@@ -47,11 +54,17 @@ use function CraftCms\Cms\t;
  */
 class Plugin extends BasePlugin
 {
-    /** Unchanged from Schemy 5: settings live in project config and there are no tables. */
-    public string $schemaVersion = '1.0.0';
+    /** Edit section and entry type schema (and see the Sections screen). Same as Schemy 5.2. */
+    public const string PERMISSION_EDIT_SECTIONS = 'schemy-editSections';
 
-    /** Sites upgrade from the last Schemy 5 release, which has the same project config keys. */
-    public string $minVersionRequired = '5.1.0';
+    /** Edit the site identity node. Same as Schemy 5.2. */
+    public const string PERMISSION_EDIT_IDENTITY = 'schemy-editIdentity';
+
+    /** Matches Schemy 5.2: section schema and the identity in the `schemy_schemas` table. */
+    public string $schemaVersion = '1.1.0';
+
+    /** Sites upgrade from the last Schemy 5 release, which has the same table and project config keys. */
+    public string $minVersionRequired = '5.2.0';
 
     public bool $hasCpSection = true;
 
@@ -76,6 +89,8 @@ class Plugin extends BasePlugin
 
     protected array $commands = [
         ValidateCommand::class,
+        ExportSchemasCommand::class,
+        ImportSchemasCommand::class,
     ];
 
     protected array $events = [
@@ -94,6 +109,7 @@ class Plugin extends BasePlugin
         parent::register();
 
         $this->app->singleton(Validator::class);
+        $this->app->scoped(Store::class);
     }
 
     public function boot(CapabilityRegistry $capabilities): void
@@ -114,11 +130,75 @@ class Plugin extends BasePlugin
         $capabilities->register(SchemyTools::class);
     }
 
+    /**
+     * Craft lists these under Schemy in user and group permissions, after "Access Schemy".
+     *
+     * @return list<Permission>
+     */
+    #[Override]
+    protected function getPermissions(): array
+    {
+        $warning = t('Mapped field values are published in each page’s JSON-LD. Twig in values saved by non-admins isn’t run until an admin vouches for it. Sections are limited to those the user can view entries in.', category: 'schemy');
+
+        return [
+            new Permission(self::PERMISSION_EDIT_SECTIONS, t('Edit section and entry type schema', category: 'schemy'), warning: $warning),
+            new Permission(self::PERMISSION_EDIT_IDENTITY, t('Edit site identity', category: 'schemy'), warning: $warning),
+        ];
+    }
+
+    /**
+     * Whether the user can manage a section's schema: Schemy's permission plus permission to
+     * view the section's entries, since mapped field values are published in the JSON-LD.
+     */
+    public static function canManageSection(?CraftUser $user, Section $section): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        $gate = Gate::forUser($user);
+
+        return $gate->allows(self::PERMISSION_EDIT_SECTIONS) && $gate->allows("viewEntries:$section->uid");
+    }
+
+    /**
+     * Craft only shows this to users with "Access Schemy". Each screen also needs its own
+     * permission, and the settings screen is admin-only.
+     */
     #[Override]
     public function getCpNavItem(): NavItem|array|null
     {
-        if (! currentUser()?->isAdmin()) {
+        $user = currentUser();
+
+        if ($user === null) {
             return null;
+        }
+
+        $gate = Gate::forUser($user);
+        $sections = $gate->allows(self::PERMISSION_EDIT_SECTIONS);
+        $identity = $gate->allows(self::PERMISSION_EDIT_IDENTITY);
+
+        // The validator alone isn't a reason to show Schemy; it has its own place in Utilities
+        if (! $sections && ! $identity && ! $user->isAdmin()) {
+            return null;
+        }
+
+        $subnav = [];
+
+        if ($sections) {
+            $subnav[] = new NavItem()->label(t('Sections', category: 'schemy'))->href('schemy/sections');
+        }
+
+        if ($identity) {
+            $subnav[] = new NavItem()->label(t('Site Identity', category: 'schemy'))->href('schemy/identity');
+        }
+
+        if ($gate->allows('utility:'.ValidatorUtility::id())) {
+            $subnav[] = new NavItem()->label(t('Validator', category: 'schemy'))->href('utilities/'.ValidatorUtility::id());
+        }
+
+        if ($user->isAdmin()) {
+            $subnav[] = new NavItem()->label(t('Settings', category: 'schemy'))->href('settings/plugins/schemy');
         }
 
         $item = parent::getCpNavItem();
@@ -127,12 +207,7 @@ class Plugin extends BasePlugin
             return $item;
         }
 
-        $item->subnav([
-            new NavItem()->label(t('Sections', category: 'schemy'))->href('schemy/sections'),
-            new NavItem()->label(t('Site Identity', category: 'schemy'))->href('schemy/identity'),
-            new NavItem()->label(t('Validator', category: 'schemy'))->href('utilities/'.ValidatorUtility::id()),
-            new NavItem()->label(t('Settings', category: 'schemy'))->href('settings/plugins/schemy'),
-        ]);
+        $item->subnav($subnav);
 
         return $this->customiseNavItem($item, $this->getSettings());
     }

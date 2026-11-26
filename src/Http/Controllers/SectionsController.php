@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace JustinHoltWeb\Schemy\Http\Controllers;
 
-use CraftCms\Cms\Config\GeneralConfig;
 use CraftCms\Cms\Cp\Data\ActionItem;
 use CraftCms\Cms\Entry\Data\EntryType;
 use CraftCms\Cms\Http\RespondsWithFlash;
@@ -12,9 +11,9 @@ use CraftCms\Cms\Http\Responses\CpScreenResponse;
 use CraftCms\Cms\Section\Data\Section;
 use CraftCms\Cms\Section\Enums\SectionType;
 use CraftCms\Cms\Support\Facades\Sections;
+use CraftCms\Cms\Ui\Contracts\Node;
 use CraftCms\Cms\Ui\Controls\Combobox;
 use CraftCms\Cms\Ui\Controls\Lightswitch;
-use CraftCms\Cms\Ui\Enums\ControlMode;
 use CraftCms\Cms\Ui\Nodes\Callout;
 use CraftCms\Cms\Ui\Nodes\Field;
 use CraftCms\Cms\Ui\Nodes\Heading;
@@ -24,15 +23,18 @@ use CraftCms\Cms\Ui\Ui;
 use CraftCms\Cms\Ui\UiContext;
 use Illuminate\Http\Request;
 use JustinHoltWeb\Schemy\Helpers\PropertyTable;
+use JustinHoltWeb\Schemy\Plugin;
 use JustinHoltWeb\Schemy\Services\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 use function CraftCms\Cms\cp_url;
+use function CraftCms\Cms\currentUser;
 use function CraftCms\Cms\t;
 
 /**
- * Section and entry type schema. Admin-only; saving also needs `allowAdminChanges`, and the
- * screens are read-only without it.
+ * Section and entry type schema, for users with the `schemy-editSections` permission (see
+ * `routes/cp.php`). Stored in Schemy's table, not project config, so it can be edited in any
+ * environment.
  */
 readonly class SectionsController
 {
@@ -40,7 +42,6 @@ readonly class SectionsController
 
     public function __construct(
         private Schema $schema,
-        private GeneralConfig $generalConfig,
     ) {}
 
     public function index(): CpScreenResponse
@@ -53,6 +54,10 @@ readonly class SectionsController
         $rows = [];
 
         foreach (Sections::getAllSections() as $section) {
+            if (! Plugin::canManageSection(currentUser(), $section)) {
+                continue;
+            }
+
             $config = $this->schema->getSectionConfig($section);
 
             $rows[] = [
@@ -98,7 +103,7 @@ readonly class SectionsController
             ];
         }
 
-        return $this->screen($section, $values);
+        return $this->screen($section, $values, $config['untrusted']);
     }
 
     public function save(Request $request, int $sectionId): Response|CpScreenResponse
@@ -110,7 +115,7 @@ readonly class SectionsController
             'entryTypes' => (array) $request->input('entryTypes', []),
         ];
 
-        if (! $this->schema->saveSectionConfig($section, $posted)) {
+        if (! $this->schema->saveSectionConfig($section, $posted, self::vouch($request))) {
             return $this->asFailure(t('Couldn’t save schema settings.', category: 'schemy'));
         }
 
@@ -123,17 +128,15 @@ readonly class SectionsController
     /**
      * @param  array<string, mixed>  $values
      */
-    private function screen(Section $section, array $values): CpScreenResponse
+    private function screen(Section $section, array $values, bool $untrusted): CpScreenResponse
     {
-        $editable = $this->generalConfig->allowAdminChanges;
         $entryTypes = $section->getEntryTypes();
         $fieldOptions = $this->schema->fieldOptions(array_map(fn (EntryType $entryType) => $entryType->getFieldLayout(), $entryTypes));
 
         $nodes = [];
 
-        if (! $editable) {
-            $nodes[] = Callout::make('schemy-readonly', t('Schemy settings are stored in project config, and `allowAdminChanges` is disabled in this environment. Make changes in your development environment and deploy them.', category: 'schemy'))
-                ->variant('warning');
+        if ($untrusted) {
+            array_push($nodes, ...SectionsController::untrustedNodes());
         }
 
         $nodes[] = Field::make(t('Schema type', category: 'schemy'), Combobox::make('type')->options(PropertyTable::typeOptions())->placeholder('Article'))
@@ -163,19 +166,45 @@ readonly class SectionsController
                 new ActionItem()->label(t('Section Schema', category: 'schemy'))->href(cp_url('schemy/sections')),
                 new ActionItem()->label((string) $section->name),
             ])
-            ->ui(Ui::make($nodes), new UiContext(
-                values: $values,
-                mode: $editable ? ControlMode::Editable : ControlMode::ReadOnly,
-            ), props: [
-                'readOnly' => ! $editable,
-                'submit' => $editable ? ['method' => 'post', 'url' => cp_url("schemy/sections/{$section->id}")] : null,
+            ->ui(Ui::make($nodes), new UiContext(values: $values), props: [
+                'submit' => ['method' => 'post', 'url' => cp_url("schemy/sections/{$section->id}")],
             ]);
+    }
+
+    /**
+     * The note on a page holding values saved by someone who isn't an admin, and for admins, the
+     * switch that vouches for them.
+     *
+     * @return list<Node>
+     */
+    public static function untrustedNodes(): array
+    {
+        $nodes = [
+            Callout::make('schemy-untrusted', t('Values here were saved by someone who isn’t an admin, so Twig in them isn’t run: they’re output as text, with only `{{ siteName }}` and `{{ siteUrl }}` filled in. Use the Field source for entry values.', category: 'schemy')),
+        ];
+
+        if (currentUser()?->isAdmin()) {
+            $nodes[] = Field::make(t('Run these values as Twig', category: 'schemy'), Lightswitch::make('trustTwig'))
+                ->instructions(t('Check every value first: Twig can read and publish anything the site can.', category: 'schemy'));
+        }
+
+        return $nodes;
+    }
+
+    /**
+     * True when an admin switched on "Run these values as Twig". Null leaves it to the signed-in user.
+     */
+    public static function vouch(Request $request): ?bool
+    {
+        return currentUser()?->isAdmin() && $request->boolean('trustTwig') ? true : null;
     }
 
     private function section(int $sectionId): Section
     {
         $section = Sections::getSectionById($sectionId);
         abort_if($section === null, 404, 'Section not found');
+        // Mapped field values are published, so the user must be able to view the entries
+        abort_unless(Plugin::canManageSection(currentUser(), $section), 403);
 
         return $section;
     }

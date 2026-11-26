@@ -60,6 +60,7 @@ Schemy is free, with everything included, on both Craft 5 and Craft 6. It only w
 
 ## Uninstalling
 
-Schemy installs no database tables. Its settings live in project config, and per-entry values
-live in an ordinary field. Uninstalling removes the output, and deleting the field removes the
-per-entry values.
+Schemy installs one table, for section schema and the site identity, which uninstalling drops.
+Its other settings live in project config, and per-entry values live in an ordinary field.
+Uninstalling removes the output, and deleting the field removes the per-entry values. Export your
+schema first (`schemy/schemas/export`) if you might want it back.
