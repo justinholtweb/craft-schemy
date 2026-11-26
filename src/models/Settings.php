@@ -6,11 +6,11 @@ use Craft;
 use craft\base\Model;
 
 /**
- * Plugin settings. Stored in project config, so everything here travels
- * between environments with the rest of your schema.
+ * Plugin settings: output switches and the sidebar. Stored in project config, so they travel
+ * between environments with the rest of your schema and change only where `allowAdminChanges` is on.
  *
- * Property rows everywhere share one shape:
- * `['property' => 'headline', 'source' => 'field'|'template', 'value' => 'title']`
+ * Section, entry type and site identity schema are content, not settings: since 5.2.0 they live
+ * in Schemy's own table (see `services\Store`) so permitted users can edit them in any environment.
  */
 class Settings extends Model
 {
@@ -38,35 +38,9 @@ class Settings extends Model
     /** Include the site identity (Organization, Person, LocalBusiness, …) node. */
     public bool $includeIdentity = true;
 
-    /** schema.org type for the site identity node. */
-    public string $identityType = 'Organization';
-
-    /** Property rows for the site identity node. Values are always Twig templates. */
-    public array $identity = [
-        ['property' => 'name', 'source' => 'template', 'value' => '{{ siteName }}'],
-        ['property' => 'url', 'source' => 'template', 'value' => '{{ siteUrl }}'],
-    ];
-
-    /**
-     * Schema config per section, keyed by section UID:
-     *
-     * ```php
-     * '<sectionUid>' => [
-     *     'type' => 'Article',
-     *     'properties' => [ ...rows ],
-     *     'entryTypes' => [
-     *         '<entryTypeUid>' => ['override' => true, 'type' => 'NewsArticle', 'properties' => [ ...rows ]],
-     *     ],
-     * ]
-     * ```
-     */
-    public array $sections = [];
-
     protected function defineRules(): array
     {
         return [
-            [['identityType'], 'string'],
-            [['identityType'], 'match', 'pattern' => '/^[A-Za-z][A-Za-z0-9]*$/'],
             [['navLabel', 'navIcon', 'navIconSvg'], 'trim'],
             [['navLabel'], 'string', 'max' => 64],
             [['navIcon'], 'validateNavIcon', 'skipOnEmpty' => true],

@@ -10,7 +10,7 @@ upgrade a copy of the site first.
 
 ## Before you start
 
-Update to **Schemy 5.1.0** on Craft 5 and run its migrations. Schemy 6 won't install over an
+Update to **Schemy 5.2.0** on Craft 5 and run its migrations. Schemy 6 won't install over an
 older version.
 
 ## Upgrade
@@ -29,8 +29,9 @@ upgrade.
 
 ## What carries over
 
-- Every setting: section and entry type schema, site identity, the output switches, and the
-  sidebar label and icon.
+- Every setting: section and entry type schema and site identity (in Schemy's table), and the
+  output switches and sidebar label and icon (in project config).
+- Schemy's permissions.
 - Every entry's Schema field value.
 - The JSON-LD itself. Each page outputs the same graph as before.
 - `craft.schemy.render()`, `add()`, `setElement()`, `disable()` and `graph()` in Twig.

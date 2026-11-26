@@ -1,0 +1,17 @@
+{% if untrusted %}
+    <div class="readable">
+        <blockquote class="note">
+            <p>{{ 'Values here were saved by someone who isn’t an admin, so Twig in them isn’t run: they’re output as text, with only `{{ siteName }}` and `{{ siteUrl }}` filled in. Use the Field source for entry values.'|t('schemy')|md(inlineOnly=true) }}</p>
+        </blockquote>
+        {% if currentUser.admin %}
+            {% import '_includes/forms' as forms %}
+            {{ forms.checkboxField({
+                label: 'Run these values as Twig'|t('schemy'),
+                instructions: 'Check every value first: Twig can read and publish anything the site can.'|t('schemy'),
+                name: 'trustTwig',
+                value: '1',
+            }) }}
+        {% endif %}
+    </div>
+    <hr>
+{% endif %}

@@ -9,6 +9,7 @@ use justinholtweb\schemy\helpers\PropertyRows;
 use justinholtweb\schemy\helpers\SchemaTypes;
 use justinholtweb\schemy\Plugin;
 use justinholtweb\schemy\web\assets\cp\CpAsset;
+use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
 
@@ -23,29 +24,43 @@ class SectionsController extends Controller
             return false;
         }
 
-        // Viewing is fine for any admin; saving needs allowAdminChanges (project config)
-        $this->requireAdmin(false);
+        // Section schema lives in Schemy's table, not project config, so it can be edited in any
+        // environment by anyone with the permission
+        if ($action->id === 'index' && !$this->currentUser()?->can(Plugin::PERMISSION_EDIT_SECTIONS)
+            && $this->currentUser()?->can(Plugin::PERMISSION_EDIT_IDENTITY)
+        ) {
+            // Landing on Schemy without access to Sections
+            $this->redirect('schemy/identity')->send();
+            return false;
+        }
+
+        $this->requirePermission(Plugin::PERMISSION_EDIT_SECTIONS);
 
         return true;
     }
 
     public function actionIndex(): Response
     {
-        $configs = Plugin::getInstance()->getSettings()->sections;
+        $configs = Plugin::getInstance()->store->getAllSectionConfigs();
         $groups = [
             Section::TYPE_SINGLE => ['label' => Craft::t('app', 'Singles'), 'sections' => []],
             Section::TYPE_CHANNEL => ['label' => Craft::t('app', 'Channels'), 'sections' => []],
             Section::TYPE_STRUCTURE => ['label' => Craft::t('app', 'Structures'), 'sections' => []],
         ];
 
+        $user = static::currentUser();
+
         foreach (Craft::$app->getEntries()->getAllSections() as $section) {
-            $config = $configs[$section->uid] ?? [];
-            $overrides = array_filter($config['entryTypes'] ?? [], fn($c) => !empty($c['override']));
+            if (!Plugin::canManageSection($user, $section)) {
+                continue;
+            }
+
+            $config = $configs[$section->uid] ?? null;
 
             $groups[$section->type]['sections'][] = [
                 'section' => $section,
                 'type' => $config['type'] ?? null,
-                'overrideCount' => count($overrides),
+                'overrideCount' => count($config['entryTypes'] ?? []),
             ];
         }
 
@@ -62,8 +77,12 @@ class SectionsController extends Controller
             throw new NotFoundHttpException('Section not found');
         }
 
+        if (!Plugin::canManageSection(static::currentUser(), $section)) {
+            throw new ForbiddenHttpException('User not authorized to view this section’s entries.');
+        }
+
         $schema = Plugin::getInstance()->schema;
-        $config = Plugin::getInstance()->getSettings()->sections[$section->uid] ?? [];
+        $config = $schema->getSectionConfig($section);
         $entryTypes = $section->getEntryTypes();
 
         $entryTypeConfigs = [];
@@ -82,25 +101,28 @@ class SectionsController extends Controller
 
         return $this->renderTemplate('schemy/sections/_edit', [
             'section' => $section,
+            'untrusted' => $config['untrusted'],
             'type' => $config['type'] ?? null,
             'properties' => PropertyRows::normalize($config['properties'] ?? []),
             'fieldOptions' => $schema->fieldOptions(array_map(fn($et) => $et->getFieldLayout(), $entryTypes)),
             'entryTypeConfigs' => $entryTypeConfigs,
             'typeNames' => SchemaTypes::names(),
-            'readOnly' => !Craft::$app->getConfig()->getGeneral()->allowAdminChanges,
         ]);
     }
 
     public function actionSave(): ?Response
     {
         $this->requirePostRequest();
-        $this->requireAdmin();
 
         $request = Craft::$app->getRequest();
         $section = Craft::$app->getEntries()->getSectionById((int)$request->getRequiredBodyParam('sectionId'));
 
         if ($section === null) {
             throw new NotFoundHttpException('Section not found');
+        }
+
+        if (!Plugin::canManageSection(static::currentUser(), $section)) {
+            throw new ForbiddenHttpException('User not authorized to view this section’s entries.');
         }
 
         $entryTypes = [];
@@ -112,12 +134,21 @@ class SectionsController extends Controller
             'type' => $request->getBodyParam('type', ''),
             'properties' => $request->getBodyParam('properties', []),
             'entryTypes' => $entryTypes,
-        ]);
+        ], self::vouch());
 
         if (!$saved) {
             return $this->asFailure(Craft::t('schemy', 'Couldn’t save schema settings.'));
         }
 
         return $this->asSuccess(Craft::t('schemy', 'Schema saved for {section}.', ['section' => $section->name]));
+    }
+
+    /**
+     * True when an admin ticked "Run these values as Twig" on a page holding values saved by
+     * someone who isn't an admin. Null leaves it to the signed-in user.
+     */
+    public static function vouch(): ?bool
+    {
+        return Craft::$app->getUser()->getIsAdmin() && Craft::$app->getRequest()->getBodyParam('trustTwig') ? true : null;
     }
 }

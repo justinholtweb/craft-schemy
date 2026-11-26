@@ -11,7 +11,8 @@ use justinholtweb\schemy\web\assets\cp\CpAsset;
 use yii\web\Response;
 
 /**
- * General settings and the site identity node.
+ * General settings (admins, project config) and the site identity node (its own permission,
+ * stored in Schemy's table).
  */
 class SettingsController extends Controller
 {
@@ -21,7 +22,12 @@ class SettingsController extends Controller
             return false;
         }
 
-        $this->requireAdmin(false);
+        if (in_array($action->id, ['identity', 'save-identity'], true)) {
+            $this->requirePermission(Plugin::PERMISSION_EDIT_IDENTITY);
+        } else {
+            // Viewing is fine for any admin; saving needs allowAdminChanges (project config)
+            $this->requireAdmin(false);
+        }
 
         return true;
     }
@@ -39,10 +45,9 @@ class SettingsController extends Controller
         $this->getView()->registerAssetBundle(CpAsset::class);
 
         return $this->renderTemplate('schemy/identity', [
-            'settings' => Plugin::getInstance()->getSettings(),
+            'identity' => Plugin::getInstance()->store->getIdentity(),
             'identityTypes' => SchemaTypes::IDENTITY_TYPES,
             'typeNames' => SchemaTypes::names(),
-            'readOnly' => !Craft::$app->getConfig()->getGeneral()->allowAdminChanges,
         ]);
     }
 
@@ -67,14 +72,15 @@ class SettingsController extends Controller
     public function actionSaveIdentity(): ?Response
     {
         $this->requirePostRequest();
-        $this->requireAdmin();
 
         $request = Craft::$app->getRequest();
+        Plugin::getInstance()->store->saveIdentity(
+            (string)$request->getBodyParam('type', ''),
+            PropertyRows::normalize($request->getBodyParam('properties', [])),
+            SectionsController::vouch(),
+        );
 
-        return $this->save([
-            'identityType' => SchemaTypes::cleanName($request->getBodyParam('type', '')) ?: 'Organization',
-            'identity' => PropertyRows::normalize($request->getBodyParam('properties', [])),
-        ]);
+        return $this->asSuccess(Craft::t('schemy', 'Site identity saved.'));
     }
 
     private function save(array $changes): ?Response

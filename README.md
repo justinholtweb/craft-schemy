@@ -130,13 +130,13 @@ Leave out `id`/`uri` for the site-wide nodes. The Schema field also returns `mod
 
 ## MCP
 
-On Craft 5.12.1+, Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, and, for admins, `schemy_settings_get`, `schemy_sections_list`, `schemy_section_schema_set`, `schemy_identity_set` and `schemy_settings_set` (writes need `allowAdminChanges`). The Schema field describes its value to Craft’s own entry tools, so assistants can set per-entry schema too.
+On Craft 5.12.1+, Schemy adds tools to Craft’s MCP server: `schemy_entry_jsonld_get`, `schemy_jsonld_validate`, `schemy_types_list`, `schemy_sections_list`, `schemy_section_schema_set` and `schemy_identity_set` (for users with Schemy's permissions), and, for admins, `schemy_settings_get` and `schemy_settings_set` (which needs `allowAdminChanges`). The Schema field describes its value to Craft’s own entry tools, so assistants can set per-entry schema too.
 
 ## Settings and environments
 
-All Schemy configuration (section mappings, identity, and toggles) lives in plugin settings, so it’s stored in **project config** and deploys like the rest of your schema. When `allowAdminChanges` is off, the Schemy pages are read-only.
+Section mappings, entry type overrides and the site identity are stored in Schemy’s own table, so they can be edited in any environment, production included. Non-admins need the **Edit section and entry type schema** or **Edit site identity** permission. Copy them between environments with `php craft schemy/schemas/export --file=schemy.json` and `schemy/schemas/import`.
 
-You can also override any setting in `config/schemy.php`:
+The output switches and sidebar settings are plugin settings in **project config**, read-only where `allowAdminChanges` is off. You can override them in `config/schemy.php`:
 
 ```php
 <?php

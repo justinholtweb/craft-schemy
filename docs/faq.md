@@ -39,8 +39,10 @@ Results Test is still the final word on whether a rich result shows.
 
 ## Can editors change schema without an admin?
 
-Yes, through the per-entry field. Section, entry type and identity settings are admin-only
-because they live in project config.
+Yes. Every entry with the Schema field in its layout can inherit, customize or disable its own
+schema. Section, entry type and identity schema need their own
+[permissions](https://justinholt.com/plugins/craft-schemy/docs/configuration#permissions), and
+can be edited on production, because they're stored in the database rather than project config.
 
 ## Is it multi-site aware?
 

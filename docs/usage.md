@@ -41,7 +41,9 @@ everyone who edits those entries. The values then render in Twig's sandbox.
 > **Craft 5:** with **Parse Twig in values** on, entry values run as ordinary Twig, without the
 > sandbox.
 
-Mappings on the section and identity pages are admin-only, so they always parse Twig.
+Mappings on the section and identity pages parse Twig when an admin wrote them. Values saved by
+someone who isn't an admin are output as text until an admin vouches for them. See
+[Permissions](https://justinholt.com/plugins/craft-schemy/docs/configuration#permissions).
 
 ### Other element types
 
