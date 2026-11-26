@@ -4,14 +4,14 @@
 
 {% set title = section.name %}
 {% set selectedSubnavItem = 'sections' %}
-{% set fullPageForm = not readOnly %}
+{% set fullPageForm = true %}
 {% set crumbs = [
     {label: 'Schemy'|t('schemy'), url: url('schemy')},
     {label: 'Sections'|t('schemy'), url: url('schemy/sections')},
 ] %}
 
 {% block content %}
-    {% include 'schemy/_includes/readonly' %}
+    {% include 'schemy/_includes/untrusted' with {untrusted: untrusted} %}
 
     {{ actionInput('schemy/sections/save') }}
     {{ redirectInput('schemy/sections') }}

@@ -1,5 +1,29 @@
 # Release Notes for Schemy
 
+## 5.2.0 - 2026-11-26
+
+### Added
+- Permissions: **Edit section and entry type schema** and **Edit site identity**, so people who
+  aren't admins can manage schema. Schemy's sidebar item and screens follow them, and a section's
+  schema also needs permission to view its entries.
+  ([#1](https://github.com/justinholtweb/craft-schemy/issues/1))
+- `php craft schemy/schemas/export` and `schemy/schemas/import`, to copy section schema and the
+  identity between environments as JSON.
+
+### Changed
+- Section schema, entry type overrides and the site identity are now stored in Schemy's own
+  table instead of project config, so they can be edited where `allowAdminChanges` is off. The
+  update moves your existing config into the table and removes it from project config; run it in
+  development and deploy as usual. The output switches and sidebar settings stay in project config.
+- The MCP tools `schemy_sections_list`, `schemy_section_schema_set` and `schemy_identity_set`
+  now need Schemy's permissions instead of an admin, and work where `allowAdminChanges` is off.
+- `schemy_settings_get` returns the identity under `identity`, and `schemy_identity_set` returns
+  only the identity.
+- Twig in values saved on the section and identity pages by someone who isn't an admin isn't run:
+  they're output as text, with `{{ siteName }}` and `{{ siteUrl }}` filled in, until an admin
+  ticks **Run these values as Twig** on that page.
+- `sections`, `identity` and `identityType` can no longer be set in `config/schemy.php`.
+
 ## 5.1.0 - 2026-11-25
 
 ### Added

@@ -3,10 +3,10 @@
 
 {% set title = 'Site Identity'|t('schemy') %}
 {% set selectedSubnavItem = 'identity' %}
-{% set fullPageForm = not readOnly %}
+{% set fullPageForm = true %}
 
 {% block content %}
-    {% include 'schemy/_includes/readonly' %}
+    {% include 'schemy/_includes/untrusted' with {untrusted: identity.untrusted} %}
 
     {{ actionInput('schemy/settings/save-identity') }}
     {{ redirectInput('schemy/identity') }}
@@ -17,8 +17,8 @@
 
     {{ schemy.editor({
         id: 'schemy-identity',
-        type: settings.identityType,
-        rows: settings.identity,
+        type: identity.type,
+        rows: identity.properties,
         allowFieldSource: false,
         typeSuggestions: identityTypes,
         typeLabel: 'Identity type'|t('schemy'),

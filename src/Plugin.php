@@ -5,15 +5,19 @@ namespace justinholtweb\schemy;
 use Craft;
 use craft\base\Model;
 use craft\base\Plugin as BasePlugin;
+use craft\elements\User;
 use craft\events\RegisterComponentTypesEvent;
 use craft\events\RegisterGqlQueriesEvent;
 use craft\events\RegisterGqlSchemaComponentsEvent;
 use craft\events\RegisterUrlRulesEvent;
+use craft\events\RegisterUserPermissionsEvent;
 use craft\helpers\Html;
 use craft\helpers\UrlHelper;
+use craft\models\Section;
 use craft\services\Fields;
 use craft\services\Gql;
 use craft\services\Mcp;
+use craft\services\UserPermissions;
 use craft\services\Utilities;
 use craft\web\twig\variables\CraftVariable;
 use craft\web\UrlManager;
@@ -23,6 +27,7 @@ use justinholtweb\schemy\gql\queries\SchemyQuery;
 use justinholtweb\schemy\mcp\SchemyTools;
 use justinholtweb\schemy\models\Settings;
 use justinholtweb\schemy\services\Schema;
+use justinholtweb\schemy\services\Store;
 use justinholtweb\schemy\services\Validator;
 use justinholtweb\schemy\utilities\ValidatorUtility;
 use justinholtweb\schemy\variables\SchemyVariable;
@@ -33,12 +38,19 @@ use yii\base\Event;
  * Schemy: schema.org JSON-LD for sections, entry types, and entries.
  *
  * @property-read Schema $schema
+ * @property-read Store $store
  * @property-read Validator $validator
  * @method Settings getSettings()
  */
 class Plugin extends BasePlugin
 {
-    public string $schemaVersion = '1.0.0';
+    /** Edit section and entry type schema (and see the Sections screen). */
+    public const PERMISSION_EDIT_SECTIONS = 'schemy-editSections';
+
+    /** Edit the site identity node. */
+    public const PERMISSION_EDIT_IDENTITY = 'schemy-editIdentity';
+
+    public string $schemaVersion = '1.1.0';
     public bool $hasCpSettings = true;
     public bool $hasCpSection = true;
 
@@ -47,6 +59,7 @@ class Plugin extends BasePlugin
         return [
             'components' => [
                 'schema' => Schema::class,
+                'store' => Store::class,
                 'validator' => Validator::class,
             ],
         ];
@@ -70,6 +83,23 @@ class Plugin extends BasePlugin
             $event->types[] = ValidatorUtility::class;
         });
 
+        Event::on(UserPermissions::class, UserPermissions::EVENT_REGISTER_PERMISSIONS, function(RegisterUserPermissionsEvent $event) {
+            $warning = Craft::t('schemy', 'Mapped field values are published in each page’s JSON-LD. Twig in values saved by non-admins isn’t run until an admin vouches for it. Sections are limited to those the user can view entries in.');
+            $event->permissions[] = [
+                'heading' => Craft::t('schemy', 'Schemy'),
+                'permissions' => [
+                    self::PERMISSION_EDIT_SECTIONS => [
+                        'label' => Craft::t('schemy', 'Edit section and entry type schema'),
+                        'warning' => $warning,
+                    ],
+                    self::PERMISSION_EDIT_IDENTITY => [
+                        'label' => Craft::t('schemy', 'Edit site identity'),
+                        'warning' => $warning,
+                    ],
+                ],
+            ];
+        });
+
         $this->registerGql();
         $this->registerMcp();
 
@@ -84,18 +114,45 @@ class Plugin extends BasePlugin
         });
     }
 
+    /**
+     * Whether the user can manage a section's schema: Schemy's permission plus permission to
+     * view the section's entries, since mapped field values are published in the JSON-LD.
+     */
+    public static function canManageSection(?User $user, Section $section): bool
+    {
+        return $user !== null
+            && $user->can(self::PERMISSION_EDIT_SECTIONS)
+            && $user->can("viewEntries:$section->uid");
+    }
+
+    /**
+     * Craft only shows this to users with "Access Schemy". Each screen also needs its own
+     * permission, and the settings screen is admin-only.
+     */
     public function getCpNavItem(): ?array
     {
-        if (!Craft::$app->getUser()->getIsAdmin()) {
+        $user = Craft::$app->getUser();
+        $subnav = [];
+
+        if ($user->checkPermission(self::PERMISSION_EDIT_SECTIONS)) {
+            $subnav['sections'] = ['label' => Craft::t('schemy', 'Sections'), 'url' => 'schemy/sections'];
+        }
+
+        if ($user->checkPermission(self::PERMISSION_EDIT_IDENTITY)) {
+            $subnav['identity'] = ['label' => Craft::t('schemy', 'Site Identity'), 'url' => 'schemy/identity'];
+        }
+
+        if ($user->getIsAdmin()) {
+            $subnav['settings'] = ['label' => Craft::t('schemy', 'Settings'), 'url' => 'schemy/settings'];
+        }
+
+        if ($subnav === []) {
             return null;
         }
 
         $item = $this->customiseNavItem(parent::getCpNavItem(), $this->getSettings());
-        $item['subnav'] = [
-            'sections' => ['label' => Craft::t('schemy', 'Sections'), 'url' => 'schemy/sections'],
-            'identity' => ['label' => Craft::t('schemy', 'Site Identity'), 'url' => 'schemy/identity'],
-            'settings' => ['label' => Craft::t('schemy', 'Settings'), 'url' => 'schemy/settings'],
-        ];
+        $item['url'] = reset($subnav)['url'];
+        $item['subnav'] = $subnav;
 
         return $item;
     }

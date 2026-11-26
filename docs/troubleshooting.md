@@ -45,7 +45,19 @@ WebSite nodes and keep only its main entities.
 
 On Craft 6, `craft.schemy` is a method in Blade: `$craft->schemy()`.
 
-## The settings pages are read-only
+## The settings page is read-only
 
-`allowAdminChanges` is off in this environment. Schemy settings are project config: change them
-locally and deploy.
+`allowAdminChanges` is off in this environment. The output switches and sidebar settings are
+project config: change them locally and deploy. Section schema and the site identity are stored
+in the database, so those pages stay editable.
+
+## Schemy isn't in the sidebar, or a page is forbidden
+
+Non-admins need **Access Schemy** plus **Edit section and entry type schema** or **Edit site
+identity**. See [Permissions](https://justinholt.com/plugins/craft-schemy/docs/configuration#permissions).
+
+## Section schema didn't deploy
+
+Section schema and the identity are stored in the database since 5.2.0, not in `project.yaml`.
+Use `schemy/schemas/export` and `schemy/schemas/import` (Craft 6: `schemy:schemas:export` and
+`schemy:schemas:import`) to copy them between environments.

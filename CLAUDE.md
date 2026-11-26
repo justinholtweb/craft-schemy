@@ -9,7 +9,7 @@ as `justinholtweb/craft-schemy`. **Free, under the Craft License, with no editio
 ## Tech Stack
 
 - **PHP 8.2+**, **Craft CMS 5.12.1+** (MCP and `InputSchemaFieldInterface`), Yii2, Twig
-- No build step, no database tables, no outbound HTTP. One classic IIFE in
+- No build step, one database table (`schemy_schemas`), no outbound HTTP. One classic IIFE in
   `src/web/assets/cp/dist/schemy.js`.
 
 ## Architecture
@@ -22,14 +22,23 @@ as `justinholtweb/craft-schemy`. **Free, under the Craft License, with no editio
 
 ### Where config lives
 
-- **Sections and entry types**: plugin settings in project config, `sections` keyed by section UID →
-  `{type, properties, entryTypes: {entryTypeUid: {override, type, properties}}}`. Entry types are
-  keyed inside their section because Craft 5 shares entry types across sections.
-- **Site identity and general switches**: also plugin settings.
+- **Sections, entry types and site identity** (5.2+): Schemy's `schemy_schemas` table via
+  `services\Store`, one row per scope (`identity` or a section UID) with `type`, `properties`,
+  `entryTypes` (`{entryTypeUid: {type, properties}}`; entry types are keyed inside their section
+  because Craft 5 shares them across sections) and `untrusted`. Not project config, so they're
+  editable where `allowAdminChanges` is off (issue #1). `untrusted` is set when a non-admin saves
+  (`Store::isTrusted()`: only an admin, or code passing `true`; nobody signed in is untrusted, even on
+  the console; MCP passes its actor; export/import carries the flag, `--trusted` overrides)
+  values containing `{`, and sticks through admin saves until an admin ticks "Run these values as
+  Twig" (`trustTwig`, `SectionsController::vouch()` passes `true`) or no value contains `{`. Twig in
+  untrusted rows is never run, not even sandboxed (the sandbox still allows `entry.author.email`):
+  `Schema::untrustedValue()` fills in only `{{ siteName }}`/`{{ siteUrl }}`. Before the migration has run, `Store` reads the old
+  project config keys. `schemy/schemas/export|import` moves them between environments.
+- **General switches and sidebar**: plugin settings in project config.
 - **Per entry**: the `SchemaField` value (`models\SchemaOverride`, a JSON column) with mode
   `inherit | override | disable`, its own type and properties, and `extraJson`.
 
-`savePluginSettings()` writes only the keys it's given, so every save goes through
+For plugin settings, `savePluginSettings()` writes only the keys it's given, so every save goes through
 `Schema::saveSettings()`, which merges into `getSettings()->toArray()`. Pass a partial array to
 `savePluginSettings()` directly and the other settings are lost.
 
@@ -59,7 +68,8 @@ rules live in `helpers\RichResults` (an approximation of Google's docs; say so w
 surfaced). It's reached from the utility (`utilities\ValidatorUtility` + `ValidatorController`), the
 field preview, `console\controllers\ValidateController` (`schemy/validate`, exits 65 on errors) and
 MCP. GraphQL is `gql\queries\SchemyQuery` (component `schemy.all:read`, scoped to the schema's
-sections and sites) and `gql\types\SchemyTypes`. MCP tools are `mcp\SchemyTools`; admin writes use
+sections and sites) and `gql\types\SchemyTypes`. MCP tools are `mcp\SchemyTools`; section and identity tools use
+`#[RequiresPermission]` with `Plugin::PERMISSION_EDIT_SECTIONS|IDENTITY`, settings writes use
 `#[RequiresAdminChanges]`, entry reads check `craft\mcp\Authorization::allows()`. Anything that renders
 outside a site request goes through `Schema::getDocumentForElement()`, which switches the current site.
 
@@ -101,6 +111,8 @@ see its README.
 
 - `Craft::t('schemy', '…')` for user-facing strings; `src/translations/en/schemy.php` lists them
 - Business logic in services; controllers stay thin
-- CP screens are admin-only; saves also need `allowAdminChanges`, and the screens render read-only
-  without it
+- Sections and Site Identity screens need their permission (`schemy-editSections`,
+  `schemy-editIdentity`); a section also needs `viewEntries:<uid>` (`Plugin::canManageSection()`,
+  used by the screens and MCP), because mapped field values are published; the settings screen is admin-only, saves need `allowAdminChanges`, and it
+  renders read-only without it
 - Never mark plugin settings `required`, because it blocks fresh installs

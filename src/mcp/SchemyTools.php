@@ -7,6 +7,7 @@ namespace justinholtweb\schemy\mcp;
 use craft\elements\Entry;
 use craft\mcp\attributes\RequiresAdmin;
 use craft\mcp\attributes\RequiresAdminChanges;
+use craft\mcp\attributes\RequiresPermission;
 use craft\mcp\Authorization;
 use craft\mcp\McpActor;
 use craft\models\EntryType;
@@ -25,9 +26,10 @@ use Mcp\Schema\ToolAnnotations;
 /**
  * Schemy's tools for Craft's MCP server (Craft 5.12.1+).
  *
- * Reading an entry's JSON-LD needs permission to view the entry. Reading
- * config needs an admin, and changing it also needs `allowAdminChanges`,
- * the same as the control panel screens.
+ * Reading an entry's JSON-LD needs permission to view the entry. Section schema and site
+ * identity need Schemy's permissions, the same as their control panel screens, and work in any
+ * environment. General settings are project config: reading needs an admin, changing them also
+ * needs `allowAdminChanges`.
  */
 class SchemyTools
 {
@@ -75,16 +77,18 @@ class SchemyTools
     /** @return array<string, mixed> */
     #[McpTool(
         name: 'schemy_settings_get',
-        description: 'Gets Schemy’s general settings and site identity: output switches, the identity type and its property rows, and the sidebar label and icon (navLabel, navIcon, navIconSvg).',
+        description: 'Gets Schemy’s general settings and site identity: output switches, the sidebar label and icon (navLabel, navIcon, navIconSvg), and the identity type and its property rows.',
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]
     #[RequiresAdmin]
     public function settingsGet(): array
     {
-        $settings = Plugin::getInstance()->getSettings()->toArray();
-        unset($settings['sections']);
+        $plugin = Plugin::getInstance();
 
-        return ['settings' => $settings];
+        return [
+            'settings' => $plugin->getSettings()->toArray(),
+            'identity' => $this->serializeIdentity(),
+        ];
     }
 
     /** @return array<string, mixed> */
@@ -93,13 +97,16 @@ class SchemyTools
         description: 'Lists every section with its Schemy schema (type and property rows) and each entry type’s override, if any. Entry types without an override inherit the section’s schema.',
         annotations: new ToolAnnotations(readOnlyHint: true),
     )]
-    #[RequiresAdmin]
+    #[RequiresPermission(Plugin::PERMISSION_EDIT_SECTIONS)]
     public function sectionsList(): array
     {
         $schema = Plugin::getInstance()->schema;
 
         return [
-            'sections' => array_map(fn(Section $section) => $this->serializeSection($section, $schema), $this->entries->getAllSections()),
+            'sections' => array_values(array_map(
+                fn(Section $section) => $this->serializeSection($section, $schema),
+                array_filter($this->entries->getAllSections(), fn(Section $section) => Plugin::canManageSection($this->actor->user(), $section)),
+            )),
         ];
     }
 
@@ -112,7 +119,7 @@ class SchemyTools
         description: 'Sets the schema for a section, or for one entry type within it when entryTypeHandle is given. Replaces the type and property rows at that level; other entry type overrides are kept. An empty type clears the section’s schema, or removes the entry type’s override. Read schemy_sections_list first and pass back any rows you want to keep.',
         annotations: new ToolAnnotations(destructiveHint: true, idempotentHint: true),
     )]
-    #[RequiresAdminChanges]
+    #[RequiresPermission(Plugin::PERMISSION_EDIT_SECTIONS)]
     public function sectionSchemaSet(
         string $type,
         #[JsonSchema(items: self::PropertyRowSchema)]
@@ -148,7 +155,7 @@ class SchemyTools
             $config['properties'] = $properties;
         }
 
-        if (!$schema->saveSectionConfig($section, $config)) {
+        if (!$schema->saveSectionConfig($section, $config, $this->actor->user())) {
             throw new ToolCallException('Couldn’t save the section’s schema.');
         }
 
@@ -164,7 +171,7 @@ class SchemyTools
         description: 'Sets the site identity node output on every page and used as the publisher of creative works. Every row is rendered as a template per site, so {{ siteName }} and {{ siteUrl }} work; the source is ignored. Replaces all identity rows.',
         annotations: new ToolAnnotations(destructiveHint: true, idempotentHint: true),
     )]
-    #[RequiresAdminChanges]
+    #[RequiresPermission(Plugin::PERMISSION_EDIT_IDENTITY)]
     public function identitySet(
         #[JsonSchema(items: self::PropertyRowSchema)]
         array $properties,
@@ -178,11 +185,9 @@ class SchemyTools
 
         $properties = array_map(fn(array $row) => ['source' => 'template'] + $row, $properties);
 
-        if (!Plugin::getInstance()->schema->saveSettings(['identityType' => $cleanType, 'identity' => $properties])) {
-            throw new ToolCallException('Couldn’t save the site identity.');
-        }
+        Plugin::getInstance()->store->saveIdentity($cleanType, $properties, $this->actor->user());
 
-        return $this->settingsGet();
+        return ['identity' => $this->serializeIdentity()];
     }
 
     /** @return array<string, mixed> */
@@ -270,7 +275,8 @@ class SchemyTools
 
         $section = $id !== null ? $this->entries->getSectionById($id) : $this->entries->getSectionByHandle($handle);
 
-        if ($section === null) {
+        // Sections whose entries the user can't view are treated as missing
+        if ($section === null || !Plugin::canManageSection($this->actor->user(), $section)) {
             throw new ToolCallException('Section not found.');
         }
 
@@ -286,6 +292,14 @@ class SchemyTools
         }
 
         throw new ToolCallException("The section doesn’t use an entry type with the handle `$handle`.");
+    }
+
+    /** @return array<string, mixed> */
+    private function serializeIdentity(): array
+    {
+        $identity = Plugin::getInstance()->store->getIdentity();
+
+        return ['type' => $identity['type'], 'properties' => $identity['properties']];
     }
 
     /** @return array<string, mixed> */

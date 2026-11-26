@@ -205,13 +205,15 @@ class Schema extends Component
     }
 
     /**
-     * Saves a section's schema config, replacing what was there.
+     * Saves a section's schema config, replacing what was there. Section schema lives in Schemy's
+     * own table, not project config, so this works where `allowAdminChanges` is off.
      *
      * @param array{type?: string, properties?: array, entryTypes?: array<string, array>} $config
      * Entry type configs are keyed by entry type UID. Ones without `override` are dropped, as are UIDs
      * that don't belong to the section.
+     * @param User|bool|null $savedBy Who vouches for the Twig; see `Store::isTrusted()`
      */
-    public function saveSectionConfig(Section $section, array $config): bool
+    public function saveSectionConfig(Section $section, array $config, User|bool|null $savedBy = null): bool
     {
         $validUids = array_map(fn(EntryType $entryType) => $entryType->uid, $section->getEntryTypes());
         $entryTypes = [];
@@ -228,48 +230,22 @@ class Schema extends Component
             ];
         }
 
-        $clean = [
+        return Plugin::getInstance()->store->saveSectionConfig($section->uid, [
             'type' => SchemaTypes::cleanName($config['type'] ?? ''),
             'properties' => PropertyRows::normalize($config['properties'] ?? []),
             'entryTypes' => $entryTypes,
-        ];
-
-        $sections = Plugin::getInstance()->getSettings()->sections;
-
-        if ($clean['type'] === '' && empty($entryTypes)) {
-            unset($sections[$section->uid]);
-        } else {
-            $sections[$section->uid] = $clean;
-        }
-
-        return $this->saveSettings(['sections' => $sections]);
+        ], $savedBy);
     }
 
     /**
-     * Returns a section's stored config in a predictable shape.
+     * Returns a section's stored config in a predictable shape. `untrusted` is true when someone
+     * other than an admin saved it last.
      *
-     * @return array{type: string, properties: array, entryTypes: array<string, array{override: bool, type: string, properties: array}>}
+     * @return array{type: string, properties: array, entryTypes: array<string, array{override: bool, type: string, properties: array}>, untrusted: bool}
      */
     public function getSectionConfig(Section $section): array
     {
-        $config = Plugin::getInstance()->getSettings()->sections[$section->uid] ?? [];
-        $entryTypes = [];
-
-        foreach ($config['entryTypes'] ?? [] as $uid => $entryTypeConfig) {
-            if (is_array($entryTypeConfig) && !empty($entryTypeConfig['override'])) {
-                $entryTypes[$uid] = [
-                    'override' => true,
-                    'type' => (string)($entryTypeConfig['type'] ?? ''),
-                    'properties' => PropertyRows::normalize($entryTypeConfig['properties'] ?? []),
-                ];
-            }
-        }
-
-        return [
-            'type' => (string)($config['type'] ?? ''),
-            'properties' => PropertyRows::normalize($config['properties'] ?? []),
-            'entryTypes' => $entryTypes,
-        ];
+        return Plugin::getInstance()->store->getSectionConfig($section->uid);
     }
 
     /**
@@ -381,7 +357,7 @@ class Schema extends Component
      * Returns the type/properties an element gets from its section and entry type,
      * ignoring any per-entry override.
      *
-     * @return array{type: string, properties: array, from: string}|null
+     * @return array{type: string, properties: array, untrusted: bool, from: string}|null
      */
     public function getInheritedConfig(ElementInterface $element): ?array
     {
@@ -395,19 +371,15 @@ class Schema extends Component
             return null;
         }
 
-        $config = Plugin::getInstance()->getSettings()->sections[$section->uid] ?? null;
-
-        if (!is_array($config)) {
-            return null;
-        }
-
+        $config = $this->getSectionConfig($section);
         $entryTypeConfig = $config['entryTypes'][$element->getType()->uid] ?? null;
 
-        if (is_array($entryTypeConfig) && !empty($entryTypeConfig['override'])) {
-            $type = trim((string)($entryTypeConfig['type'] ?? ''));
+        if ($entryTypeConfig !== null) {
+            $type = trim($entryTypeConfig['type']);
             return $type === '' ? null : [
                 'type' => $type,
-                'properties' => PropertyRows::normalize($entryTypeConfig['properties'] ?? []),
+                'properties' => $entryTypeConfig['properties'],
+                'untrusted' => $config['untrusted'],
                 'from' => Craft::t('schemy', '{section} › {entryType}', [
                     'section' => $section->name,
                     'entryType' => $element->getType()->name,
@@ -415,11 +387,12 @@ class Schema extends Component
             ];
         }
 
-        $type = trim((string)($config['type'] ?? ''));
+        $type = trim($config['type']);
 
         return $type === '' ? null : [
             'type' => $type,
-            'properties' => PropertyRows::normalize($config['properties'] ?? []),
+            'properties' => $config['properties'],
+            'untrusted' => $config['untrusted'],
             'from' => $section->name,
         ];
     }
@@ -453,7 +426,7 @@ class Schema extends Component
         }
 
         $allowTwig = $this->findSchemaField($element->getFieldLayout())?->allowTwig ?? false;
-        $node = $this->buildNode($type, $rows, $element);
+        $node = $this->buildNode($type, $rows, $element, untrusted: $inherited['untrusted'] ?? false);
 
         // Entry-level rows replace inherited values for the same property
         $entryNode = $this->buildNode($type, $overrideRows, $element, $allowTwig);
@@ -469,9 +442,8 @@ class Schema extends Component
 
     public function buildIdentityNode(Site $site, string $id): ?array
     {
-        $settings = Plugin::getInstance()->getSettings();
-        $type = $settings->identityType ?: 'Organization';
-        $node = $this->buildNode($type, PropertyRows::normalize($settings->identity), $site);
+        $identity = Plugin::getInstance()->store->getIdentity();
+        $node = $this->buildNode($identity['type'], $identity['properties'], $site, untrusted: $identity['untrusted']);
 
         if (count($node) <= 1) {
             return null;
@@ -485,8 +457,10 @@ class Schema extends Component
      *
      * @param ElementInterface|Site|null $object What field values and object templates are read from
      * @param bool $parseTwig Whether template values are rendered as Twig or used literally
+     * @param bool $untrusted Values saved by someone who isn't an admin: Twig isn't run, only the
+     * `{{ siteName }}` and `{{ siteUrl }}` placeholders are filled in
      */
-    public function buildNode(string $type, array $rows, ElementInterface|Site|null $object, bool $parseTwig = true): array
+    public function buildNode(string $type, array $rows, ElementInterface|Site|null $object, bool $parseTwig = true, bool $untrusted = false): array
     {
         $node = ['@type' => $type];
 
@@ -496,7 +470,7 @@ class Schema extends Component
             if ($row['source'] === PropertyRows::SOURCE_FIELD) {
                 $value = $object instanceof ElementInterface ? $this->fieldValue($object, $row['value'], $kind) : null;
             } else {
-                $value = $this->templateValue($row['value'], $object, $kind, $parseTwig);
+                $value = $this->templateValue($row['value'], $object, $kind, $parseTwig, $untrusted);
             }
 
             if ($value === null || $value === '' || $value === []) {
@@ -564,13 +538,15 @@ class Schema extends Component
         }
     }
 
-    private function templateValue(string $template, ElementInterface|Site|null $object, string $kind, bool $parseTwig): mixed
+    private function templateValue(string $template, ElementInterface|Site|null $object, string $kind, bool $parseTwig, bool $untrusted = false): mixed
     {
         if (trim($template) === '') {
             return null;
         }
 
-        if ($parseTwig) {
+        if ($untrusted) {
+            $output = $this->untrustedValue($template, $object);
+        } elseif ($parseTwig) {
             try {
                 $output = Craft::$app->getView()->renderObjectTemplate($template, $object ?? new \stdClass(), [
                     'entry' => $object instanceof Entry ? $object : null,
@@ -599,6 +575,21 @@ class Schema extends Component
         }
 
         return $this->coerceString($output, $kind);
+    }
+
+    /**
+     * Fills in the placeholders allowed in values saved by someone who isn't an admin. Their Twig
+     * isn't run: even Twig's sandbox lets a template reach related data such as an author's
+     * email, which would then be published.
+     */
+    private function untrustedValue(string $template, ElementInterface|Site|null $object): string
+    {
+        $site = $object instanceof Site ? $object : ($object?->getSite() ?? Craft::$app->getSites()->getCurrentSite());
+
+        return (string)preg_replace_callback('/\{\{\s*(siteName|siteUrl)\s*\}\}/', fn(array $match) => match ($match[1]) {
+            'siteName' => $site->getName(),
+            default => $this->siteUrl($site),
+        }, $template);
     }
 
     /**

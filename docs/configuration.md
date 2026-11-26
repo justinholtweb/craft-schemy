@@ -87,13 +87,64 @@ empty for the defaults. They're stored in project config with the other settings
 `navIcon` and `navIconSvg`. An override in Craft's own Settings → Control Panel Navigation wins
 over these.
 
-## Project config
+## Where things are stored
 
-All of the above is plugin settings, so it is stored in project config and deploys with your
-schema. With `allowAdminChanges` off, the Schemy pages are read-only. Make changes locally and
-deploy them.
+Section schema, entry type overrides and the site identity are content, so they're stored in
+Schemy's own database table. They can be edited in any environment, including production with
+`allowAdminChanges` off, by anyone with the permissions below.
 
-Any setting can be overridden in `config/craft/schemy.php` (on Craft 5: `config/schemy.php`):
+The output switches and the sidebar label and icon are plugin settings. They're stored in project
+config and deploy with the rest of your schema. With `allowAdminChanges` off, that page is
+read-only: change it locally and deploy.
+
+> Before Schemy 5.2.0 (and 6.0.0-beta.2), section schema and the identity were project config
+> too. The update moves them into the table for you.
+
+## Permissions
+
+Under **Schemy** in a user group's or user's permissions:
+
+| Permission | Lets people |
+| --- | --- |
+| Access Schemy | See Schemy in the sidebar (Craft adds this one for every plugin) |
+| Edit section and entry type schema | Use **Schemy → Sections**, and the matching MCP tools, for sections whose entries they can view |
+| Edit site identity | Use **Schemy → Site Identity**, and the matching MCP tool |
+
+Mapped field values end up in each page's public JSON-LD, so a section's schema can only be
+edited by people who can also view its entries. Admins have all of them. The **Schema Validator** utility has Craft's usual utility permission,
+and the settings page is admin-only.
+
+Template values on these pages can use Twig, but only an admin's. When someone who isn't an
+admin saves a page, Twig in its values isn't run: they're output as text, with only
+`{{ siteName }}` and `{{ siteUrl }}` filled in. Map entry values with the **Field** source instead.
+(Even Twig's sandbox would let a template reach related data, such as an author's email, and
+publish it.)
+
+The page shows a note while that's the case. It stays that way when an admin saves the page,
+until the admin ticks **Run these values as Twig** after checking them, or no value contains Twig.
+
+## Moving schema between environments
+
+Since section schema and the identity no longer travel with `project.yaml`, export them from one
+environment and import them into another:
+
+```sh
+# Craft 5
+php craft schemy/schemas/export --file=schemy.json
+php craft schemy/schemas/import --file=schemy.json
+
+# Craft 6
+php artisan schemy:schemas:export --file=schemy.json
+php artisan schemy:schemas:import --file=schemy.json
+```
+
+Sections and entry types are matched by UID, then by handle. Sections not in the file are left
+as they are. The file records which rows were saved by non-admins, and an import keeps that; add
+`--trusted` to vouch for every row in a file you've checked.
+
+## Config file
+
+The plugin settings can be overridden in `config/craft/schemy.php` (on Craft 5: `config/schemy.php`):
 
 ```php
 <?php

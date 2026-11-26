@@ -6,7 +6,7 @@ summary: Tools for AI assistants connected to Craft's MCP server.
 ---
 
 Craft has an MCP server that AI assistants can connect to (Craft 5.12.1 and later, and Craft 6). Schemy adds tools to it, so an
-assistant can read and check structured data and, for admins, set it up.
+assistant can read and check structured data and, with the right permissions, set it up.
 
 | Tool | Who can use it | |
 | --- | --- | --- |
@@ -14,13 +14,14 @@ assistant can read and check structured data and, for admins, set it up.
 | `schemy_jsonld_validate` | Any connected user | Validates a JSON-LD string |
 | `schemy_types_list` | Any connected user | Known types, their properties, and rich result rules |
 | `schemy_settings_get` | Admins | Output switches, identity, sidebar label and icon |
-| `schemy_sections_list` | Admins | Each section's schema and entry type overrides |
-| `schemy_section_schema_set` | Admins, with `allowAdminChanges` | Sets a section's or entry type's schema |
-| `schemy_identity_set` | Admins, with `allowAdminChanges` | Sets the site identity |
+| `schemy_sections_list` | Users who can edit section schema | Each section's schema and entry type overrides |
+| `schemy_section_schema_set` | Users who can edit section schema | Sets a section's or entry type's schema |
+| `schemy_identity_set` | Users who can edit site identity | Sets the site identity |
 | `schemy_settings_set` | Admins, with `allowAdminChanges` | Changes the switches and sidebar |
 
-Write tools need the token's **Full access** scope, as with Craft's own admin tools, and are
-hidden on environments where `allowAdminChanges` is off.
+Write tools need the token's **Full access** scope, as with Craft's own write tools.
+`schemy_settings_set` changes project config, so it's hidden where `allowAdminChanges` is off;
+the section and identity tools work in every environment.
 
 The Schema field also describes its value to Craft's own entry tools, so an assistant that can
 edit an entry can set its schema mode, type and properties the same way it sets other fields.
